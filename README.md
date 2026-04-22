@@ -1,4 +1,4 @@
-﻿# Los Troncos — Sistema POS
+﻿# Los Troncos — Sistema POS / KDS
 
 Sistema de punto de venta para restaurante con panel de cocina en tiempo real.
 
