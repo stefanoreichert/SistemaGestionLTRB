@@ -15,6 +15,7 @@ class UpdateOrderItemRequest extends FormRequest
     {
         return [
             'quantity' => ['required', 'integer', 'min:1', 'max:99'],
+            'notes'    => ['nullable', 'string', 'max:255'],
         ];
     }
 

@@ -39,6 +39,7 @@
             user-select: none;
             background: none;
             width: 100%;
+            display: block;
         }
         .mesa-btn:active { transform: scale(0.93) !important; }
         .mesa-libre {
@@ -63,6 +64,18 @@
             transform: scale(1.06);
             box-shadow: 0 0 18px rgba(239,68,68,0.25);
         }
+        /* Amarillo: pedido listo en cocina, esperando entrega */
+        .mesa-lista {
+            background: rgba(120,83,0,0.35);
+            border-color: rgba(234,179,8,0.55);
+            color: #fef08a;
+        }
+        .mesa-lista:hover {
+            background: rgba(120,83,0,0.55);
+            border-color: #eab308;
+            transform: scale(1.06);
+            box-shadow: 0 0 18px rgba(234,179,8,0.35);
+        }
         .mesa-num  { font-size: 1.6rem; font-weight: 800; line-height: 1; }
         .mesa-estado {
             font-size: 0.6rem; font-weight: 600; letter-spacing: 0.08em;
@@ -72,6 +85,18 @@
             position: absolute; top: 0.45rem; right: 0.5rem;
             width: 7px; height: 7px; border-radius: 50%;
         }
+        /* Botón entregar dentro de la tarjeta */
+        .btn-entregar {
+            display: block; width: calc(100% + 0px);
+            margin-top: 0.45rem; padding: 0.3rem 0.4rem;
+            font-size: 0.58rem; font-weight: 700; letter-spacing: .05em;
+            text-transform: uppercase; cursor: pointer;
+            background: rgba(234,179,8,.22); color: #fef08a;
+            border: 1px solid rgba(234,179,8,.5); border-radius: 0.35rem;
+            transition: background .15s;
+        }
+        .btn-entregar:hover { background: rgba(234,179,8,.38); }
+        .btn-entregar-hidden { display: none !important; }
     </style>
 
     <div style="padding:1.25rem;">
@@ -95,22 +120,37 @@
         <div id="mesas-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:0.6rem;"
              class="mesas-grid">
             @foreach($tables as $table)
-                @php $libre = $table->isFree(); @endphp
-                <button
+                @php
+                    $libre = $table->isFree();
+                    $ks    = $table->activeOrder?->kitchen_status ?? 'pendiente';
+                    $isLista = !$libre && $ks === 'listo';
+                    $cardClass = $libre ? 'mesa-libre' : ($isLista ? 'mesa-lista' : 'mesa-ocupada');
+                    $dotColor  = $libre ? '#10b981' : ($isLista ? '#eab308' : '#ef4444');
+                    $orderId   = $table->activeOrder?->id;
+                @endphp
+                <div
                     id="mesa-btn-{{ $table->number }}"
-                    class="mesa-btn {{ $libre ? 'mesa-libre' : 'mesa-ocupada' }}"
+                    class="mesa-btn {{ $cardClass }}"
+                    data-kitchen-status="{{ $ks }}"
+                    data-order-id="{{ $orderId ?? '' }}"
                     onclick="abrirMesa({{ $table->number }})"
                     ondblclick="verResumen({{ $table->number }}, event)"
-                    title="Mesa {{ $table->number }} — {{ $libre ? 'Libre' : 'Ocupada' }}">
+                    title="Mesa {{ $table->number }} — {{ $libre ? 'Libre' : ($isLista ? 'Listo' : 'Ocupada') }}">
 
                     <span id="mesa-dot-{{ $table->number }}"
                           class="mesa-dot"
-                          style="background: {{ $libre ? '#10b981' : '#ef4444' }};{{ $libre ? 'animation:pulse 2s infinite;' : '' }}"></span>
+                          style="background:{{ $dotColor }};{{ $libre ? 'animation:pulse 2s infinite;' : '' }}"></span>
 
                     <div class="mesa-num">{{ $table->number }}</div>
                     <div id="mesa-estado-{{ $table->number }}"
-                         class="mesa-estado">{{ $libre ? 'libre' : 'ocupada' }}</div>
-                </button>
+                         class="mesa-estado">{{ $libre ? 'libre' : ($isLista ? 'listo' : 'ocupada') }}</div>
+
+                    <button id="btn-entregar-{{ $table->number }}"
+                            class="btn-entregar {{ $isLista ? '' : 'btn-entregar-hidden' }}"
+                            onclick="event.stopPropagation(); entregarPedido({{ $table->number }}, this)">
+                        Pedido entregado
+                    </button>
+                </div>
             @endforeach
         </div>
 
@@ -175,37 +215,117 @@
 
         /* ── Helpers de estado ──────────────────────────────── */
         function setMesaLibre(num) {
-            const btn   = document.getElementById('mesa-btn-' + num);
-            const dot   = document.getElementById('mesa-dot-' + num);
-            const label = document.getElementById('mesa-estado-' + num);
+            const btn    = document.getElementById('mesa-btn-' + num);
+            const dot    = document.getElementById('mesa-dot-' + num);
+            const label  = document.getElementById('mesa-estado-' + num);
+            const btnEnt = document.getElementById('btn-entregar-' + num);
             if (!btn) return;
-            btn.className   = 'mesa-btn mesa-libre';
-            btn.title       = `Mesa ${num} — Libre`;
-            dot.style.background  = '#10b981';
-            dot.style.animation   = 'pulse 2s infinite';
-            label.textContent     = 'libre';
+            btn.className        = 'mesa-btn mesa-libre';
+            btn.title            = `Mesa ${num} — Libre`;
+            btn.dataset.kitchenStatus = 'pendiente';
+            dot.style.background = '#10b981';
+            dot.style.animation  = 'pulse 2s infinite';
+            label.textContent    = 'libre';
+            if (btnEnt) btnEnt.classList.add('btn-entregar-hidden');
             recalcContadores();
         }
 
         function setMesaOcupada(num) {
-            const btn   = document.getElementById('mesa-btn-' + num);
-            const dot   = document.getElementById('mesa-dot-' + num);
-            const label = document.getElementById('mesa-estado-' + num);
+            const btn    = document.getElementById('mesa-btn-' + num);
+            const dot    = document.getElementById('mesa-dot-' + num);
+            const label  = document.getElementById('mesa-estado-' + num);
+            const btnEnt = document.getElementById('btn-entregar-' + num);
             if (!btn) return;
-            btn.className   = 'mesa-btn mesa-ocupada';
-            btn.title       = `Mesa ${num} — Ocupada`;
-            dot.style.background  = '#ef4444';
-            dot.style.animation   = '';
-            label.textContent     = 'ocupada';
+            btn.className        = 'mesa-btn mesa-ocupada';
+            btn.title            = `Mesa ${num} — Ocupada`;
+            btn.dataset.kitchenStatus = 'pendiente';
+            dot.style.background = '#ef4444';
+            dot.style.animation  = '';
+            label.textContent    = 'ocupada';
+            if (btnEnt) btnEnt.classList.add('btn-entregar-hidden');
+            recalcContadores();
+        }
+
+        function setMesaLista(num) {
+            const btn    = document.getElementById('mesa-btn-' + num);
+            const dot    = document.getElementById('mesa-dot-' + num);
+            const label  = document.getElementById('mesa-estado-' + num);
+            const btnEnt = document.getElementById('btn-entregar-' + num);
+            if (!btn) return;
+            btn.className        = 'mesa-btn mesa-lista';
+            btn.title            = `Mesa ${num} — Listo para entregar`;
+            btn.dataset.kitchenStatus = 'listo';
+            dot.style.background = '#eab308';
+            dot.style.animation  = '';
+            label.textContent    = 'listo';
+            if (btnEnt) btnEnt.classList.remove('btn-entregar-hidden');
             recalcContadores();
         }
 
         function recalcContadores() {
             const total    = document.querySelectorAll('.mesa-btn').length;
-            const occupied = document.querySelectorAll('.mesa-ocupada').length;
+            const occupied = document.querySelectorAll('.mesa-ocupada, .mesa-lista').length;
             const free     = total - occupied;
             document.getElementById('lbl-free').textContent     = `${free} libres`;
             document.getElementById('lbl-occupied').textContent = `${occupied} ocupadas`;
+        }
+
+        /* ── Entregar pedido ────────────────────────────────── */
+        function entregarPedido(num, btn) {
+            const card    = document.getElementById('mesa-btn-' + num);
+            const orderId = card?.dataset.orderId;
+            if (!orderId) return;
+
+            btn.disabled    = true;
+            btn.textContent = '…';
+
+            fetch(`/orders/${orderId}/deliver`, {
+                method:  'PATCH',
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    // Vuelve a rojo: pedido entregado, sigue abierto hasta cobrar
+                    setMesaOcupada(num);
+                } else {
+                    btn.disabled    = false;
+                    btn.textContent = 'Pedido entregado';
+                }
+            })
+            .catch(() => {
+                btn.disabled    = false;
+                btn.textContent = 'Pedido entregado';
+            });
+        }
+
+        /* ── Polling de kitchen_status (cada 5 s) ───────────── */
+        function pollKitchenStatus() {
+            fetch('/api/tables/statuses', {
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+            })
+            .then(r => r.json())
+            .then(rows => {
+                rows.forEach(row => {
+                    const num  = row.number;
+                    const card = document.getElementById('mesa-btn-' + num);
+                    if (!card) return;
+
+                    // Actualizar order_id en data attribute
+                    if (row.order_id) card.dataset.orderId = row.order_id;
+
+                    const current = card.dataset.kitchenStatus ?? 'pendiente';
+                    const next    = row.kitchen_status;
+
+                    if (!row.has_order) {
+                        if (!card.classList.contains('mesa-libre')) setMesaLibre(num);
+                        return;
+                    }
+                    if (next === 'listo' && current !== 'listo') { setMesaLista(num); return; }
+                    if (next !== 'listo' && current === 'listo') { setMesaOcupada(num); return; }
+                });
+            })
+            .catch(() => {/* silencioso */});
         }
 
         /* ── Modal de resumen ───────────────────────────────── */
@@ -290,7 +410,6 @@
                 .listen('.order.updated', (data) => {
                     const tableNum = data.table_number;
                     if (!tableNum) return;
-
                     if (data.action === 'updated') {
                         setMesaOcupada(tableNum);
                     } else if (data.action === 'closed' || data.action === 'cancelled') {
@@ -299,6 +418,10 @@
                 });
         }
 
-        document.addEventListener('DOMContentLoaded', initEcho);
+        document.addEventListener('DOMContentLoaded', () => {
+            initEcho();
+            // Polling cada 5 segundos para sincronizar kitchen_status
+            setInterval(pollKitchenStatus, 5000);
+        });
     </script>
 </x-app-layout>

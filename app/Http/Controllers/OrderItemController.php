@@ -25,7 +25,7 @@ class OrderItemController extends Controller
         $order   = $this->orderService->getOrCreateOpenOrder($table);
         $item    = $this->orderService->addItem($order, $product, $request->quantity);
 
-        broadcast(new OrderUpdatedEvent($order->fresh(['table', 'items.product']), 'updated'));
+        try { broadcast(new OrderUpdatedEvent($order->fresh(['table', 'items.product']), 'updated')); } catch (\Throwable) {}
 
         return response()->json([
             'success' => true,
@@ -35,8 +35,7 @@ class OrderItemController extends Controller
                 'product'    => $product->name,
                 'quantity'   => $item->quantity,
                 'unit_price' => $item->unit_price,
-                'subtotal'   => $item->quantity * $item->unit_price,
-            ],
+                'subtotal'   => $item->quantity * $item->unit_price,                'notes'      => $item->notes,            ],
         ]);
     }
 
@@ -54,15 +53,36 @@ class OrderItemController extends Controller
         }
 
         $item  = $this->orderService->updateItem($item, $request->quantity);
+
+        // Actualizar notas si se envían
+        if ($request->has('notes')) {
+            $item->update(['notes' => $request->notes]);
+        }
+
         $order = $item->order()->with(['table', 'items.product'])->first();
 
-        broadcast(new OrderUpdatedEvent($order, 'updated'));
+        try { broadcast(new OrderUpdatedEvent($order, 'updated')); } catch (\Throwable) {}
 
         return response()->json([
             'success'  => true,
             'quantity' => $item->quantity,
             'subtotal' => $item->quantity * $item->unit_price,
         ]);
+    }
+
+    /**
+     * Actualizar solo la nota de un ítem, sin tocar la cantidad.
+     */
+    public function updateNote(OrderItem $item): \Illuminate\Http\JsonResponse
+    {
+        if (! $item->order->isOpen()) {
+            return response()->json(['success' => false, 'message' => 'El pedido ya está cerrado.'], 422);
+        }
+
+        $note = request()->input('notes', '');
+        $item->update(['notes' => $note ?: null]);
+
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -82,7 +102,7 @@ class OrderItemController extends Controller
         $this->orderService->removeItem($item);
         $order->refresh();
 
-        broadcast(new OrderUpdatedEvent($order, 'updated'));
+        try { broadcast(new OrderUpdatedEvent($order, 'updated')); } catch (\Throwable) {}
 
         return response()->json(['success' => true]);
     }

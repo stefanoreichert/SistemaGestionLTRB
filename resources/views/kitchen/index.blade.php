@@ -10,6 +10,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #0a0a0a; color: #e5e7eb; font-family: system-ui, sans-serif; }
 
+        /* ── Header ──────────────────────────────────────────── */
         .kds-header {
             background: #111; border-bottom: 1px solid #1f1f1f;
             padding: 0.65rem 1.25rem; display: flex; align-items: center;
@@ -28,20 +29,28 @@
         }
         .kds-nav-btn:hover { background: #222; color: #e5e7eb; }
 
+        /* ── Grilla ──────────────────────────────────────────── */
         .kds-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
             gap: 0.75rem; padding: 0.85rem 1rem;
         }
 
+        /* ── Tarjeta ─────────────────────────────────────────── */
         .order-card {
             background: #161616; border: 1px solid #2a2a2a;
             border-radius: 0.875rem; overflow: hidden;
             display: flex; flex-direction: column;
+            transition: border-color 0.3s;
         }
         .order-card.urgent  { border-color: #7f1d1d; }
         .order-card.warning { border-color: #78350f; }
+        .order-card.card-listo {
+            border-color: rgba(234,179,8,.55) !important;
+            background: rgba(234,179,8,.04);
+        }
 
+        /* ── Encabezado de tarjeta ───────────────────────────── */
         .card-header {
             padding: 0.65rem 0.85rem; display: flex;
             align-items: center; justify-content: space-between;
@@ -58,33 +67,56 @@
                         animation: pulse-txt 1.5s ease-in-out infinite; }
         @keyframes pulse-txt { 0%,100%{opacity:1} 50%{opacity:.55} }
 
+        /* ── Ítems ───────────────────────────────────────────── */
         .card-items { padding: 0.5rem 0.6rem; flex: 1; }
         .item-row {
-            display: flex; align-items: center; gap: 0.5rem;
+            display: flex; align-items: flex-start; gap: 0.5rem;
             padding: 0.35rem 0.4rem; border-radius: 0.4rem; margin-bottom: 0.25rem;
         }
-        .item-qty  { color: #9ca3af; font-size: 0.75rem; font-weight: 700; min-width: 1.8rem; text-align: right; }
-        .item-name { flex: 1; font-size: 0.78rem; color: #e5e7eb; }
+        .item-qty  { color: #9ca3af; font-size: 0.75rem; font-weight: 700; min-width: 1.8rem; text-align: right; padding-top: 0.05rem; }
+        .item-info { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; }
+        .item-name { font-size: 0.78rem; color: #e5e7eb; }
+        .item-note { font-size: 0.68rem; color: #f59e0b; font-style: italic; opacity: 0.9; }
         .item-row.item-done .item-name { text-decoration: line-through; opacity: 0.4; }
+        .item-row.item-done .item-note { opacity: 0.3; }
 
+        /* Botones por ítem: ciclo NUEVO → PREP. → LISTO */
         .item-status-btn {
             font-size: 0.6rem; font-weight: 700; padding: 0.18rem 0.45rem;
             border-radius: 999px; border: 1px solid; cursor: pointer;
             white-space: nowrap; letter-spacing: .03em; background: none;
         }
-        .s-new       { color: #60a5fa; border-color: rgba(96,165,250,.4); }
-        .s-new:hover { background: rgba(96,165,250,.12); }
-        .s-preparing       { color: #fb923c; border-color: rgba(251,146,60,.4); }
-        .s-preparing:hover { background: rgba(251,146,60,.12); }
-        .s-ready       { color: #4ade80; border-color: rgba(74,222,128,.4); }
-        .s-ready:hover { background: rgba(74,222,128,.12); }
+        .s-new            { color: #60a5fa; border-color: rgba(96,165,250,.4); }
+        .s-new:hover      { background: rgba(96,165,250,.12); }
+        .s-preparing      { color: #fb923c; border-color: rgba(251,146,60,.4); }
+        .s-preparing:hover{ background: rgba(251,146,60,.12); }
+        .s-ready          { color: #4ade80; border-color: rgba(74,222,128,.4); }
+        .s-ready:hover    { background: rgba(74,222,128,.12); }
 
+        /* ── Pie de tarjeta ──────────────────────────────────── */
         .card-footer {
             padding: 0.45rem 0.85rem; border-top: 1px solid #1f1f1f;
             font-size: 0.68rem; color: #4b5563;
-            display: flex; justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
         }
 
+        /* Botón toggle de estado de pedido (orden completa) */
+        .btn-order-status {
+            flex-shrink: 0; font-size: 0.6rem; font-weight: 700;
+            padding: 0.18rem 0.55rem; border-radius: 999px;
+            cursor: pointer; white-space: nowrap; letter-spacing: .03em;
+            background: none; transition: background .15s;
+        }
+        .btn-en-proceso {
+            color: #fbbf24; border: 1px solid rgba(251,191,36,.4);
+        }
+        .btn-en-proceso:hover { background: rgba(251,191,36,.12); }
+        .btn-listo {
+            color: #4ade80; border: 1px solid rgba(74,222,128,.4);
+        }
+        .btn-listo:disabled { opacity: 0.75; cursor: default; }
+
+        /* ── Vacío ───────────────────────────────────────────── */
         .kds-empty {
             grid-column: 1 / -1; text-align: center;
             padding: 4rem 1rem; color: #374151;
@@ -111,36 +143,64 @@
 
 @forelse($orders as $order)
     @php
-        $mins   = $order->opened_at ? (int) $order->opened_at->diffInMinutes(now()) : 0;
-        $tClass = $mins >= 30 ? 'time-urgent' : ($mins >= 15 ? 'time-warning' : 'time-ok');
-        $cClass = $mins >= 30 ? 'urgent' : ($mins >= 15 ? 'warning' : '');
+        $mins    = $order->opened_at ? (int) $order->opened_at->diffInMinutes(now()) : 0;
+        $tClass  = $mins >= 30 ? 'time-urgent' : ($mins >= 15 ? 'time-warning' : 'time-ok');
+        $cClass  = $mins >= 30 ? 'urgent' : ($mins >= 15 ? 'warning' : '');
+        $ks      = $order->kitchen_status ?? 'pendiente';
+        $isListo = $ks === 'listo';
     @endphp
-    <div class="order-card {{ $cClass }}" id="card-order-{{ $order->id }}" data-table="{{ $order->table->number }}">
+
+    <div class="order-card {{ $cClass }} {{ $isListo ? 'card-listo' : '' }}"
+         id="card-order-{{ $order->id }}"
+         data-table="{{ $order->table->number }}"
+         data-kitchen-status="{{ $ks }}"
+         data-opened-at="{{ $order->opened_at?->toIso8601String() }}">
+
         <div class="card-header">
             <div class="card-mesa">Mesa {{ $order->table->number }}</div>
             <div class="card-time {{ $tClass }}" id="time-{{ $order->id }}">{{ $mins }}m</div>
         </div>
+
         <div class="card-items" id="items-{{ $order->id }}">
             @foreach($order->items as $item)
-                @php $ks = $item->kitchen_status ?? 'new'; @endphp
-                <div class="item-row {{ $ks === 'ready' ? 'item-done' : '' }}" id="item-row-{{ $item->id }}">
+                @php $itemKs = $item->kitchen_status ?? 'new'; @endphp
+                <div class="item-row {{ $itemKs === 'ready' ? 'item-done' : '' }}"
+                     id="item-row-{{ $item->id }}">
                     <span class="item-qty">{{ $item->quantity }}×</span>
-                    <span class="item-name">{{ $item->product->name }}</span>
-                    <button class="item-status-btn s-{{ $ks }}"
+                    <div class="item-info">
+                        <span class="item-name">{{ $item->product->name }}</span>
+                        @if(!empty($item->notes))
+                            <span class="item-note">⚠ {{ $item->notes }}</span>
+                        @endif
+                    </div>
+                    <button class="item-status-btn s-{{ $itemKs }}"
                             id="btn-{{ $item->id }}"
-                            data-status="{{ $ks }}"
+                            data-status="{{ $itemKs }}"
                             onclick="cycleStatus({{ $item->id }}, {{ $order->id }}, {{ $order->table->number }})">
-                        {{ $ks === 'new' ? 'NUEVO' : ($ks === 'preparing' ? 'PREP.' : 'LISTO') }}
+                        {{ $itemKs === 'new' ? 'NUEVO' : ($itemKs === 'preparing' ? 'PREP.' : 'LISTO') }}
                     </button>
                 </div>
             @endforeach
         </div>
+
         <div class="card-footer">
-            <span id="footer-count-{{ $order->id }}">{{ $order->items->count() }} ítem(s)</span>
-            <span>
-                <span id="ts-{{ $order->id }}" style="display:none" data-ts="{{ $order->opened_at?->toIso8601String() }}"></span>
-                {{ $order->opened_at ? $order->opened_at->format('H:i') : '—' }}
+            <span id="footer-count-{{ $order->id }}">
+                {{ $order->items->count() }} ítem(s) &nbsp;·&nbsp; {{ $order->opened_at ? $order->opened_at->format('H:i') : '—' }}
             </span>
+
+            @if($isListo)
+                <button class="btn-order-status btn-listo"
+                        id="ks-btn-{{ $order->id }}"
+                        disabled>
+                    ✓ Pedido listo
+                </button>
+            @else
+                <button class="btn-order-status btn-en-proceso"
+                        id="ks-btn-{{ $order->id }}"
+                        onclick="toggleOrderStatus({{ $order->id }}, this)">
+                    Marcar como listo
+                </button>
+            @endif
         </div>
     </div>
 @empty
@@ -158,26 +218,26 @@ const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 const STATUS_CYCLE = { new:'preparing', preparing:'ready', ready:'new' };
 const STATUS_LABEL = { new:'NUEVO', preparing:'PREP.', ready:'LISTO' };
 
-/* ── Ciclar estado ítem ─────────────────────────── */
+/* ── Ciclar estado ítem (NUEVO → PREP. → LISTO) ─── */
 function cycleStatus(itemId, orderId, tableNum) {
     const btn = document.getElementById('btn-' + itemId);
     if (!btn) return;
     const current = btn.dataset.status;
-    const next = STATUS_CYCLE[current] ?? 'new';
-    applyItemStatus(itemId, next);   // optimistic
+    const next    = STATUS_CYCLE[current] ?? 'new';
+    applyItemStatus(itemId, next); // optimista
 
     fetch(`/kitchen/items/${itemId}/status`, {
-        method: 'PUT',
+        method:  'PUT',
         headers: { 'Content-Type':'application/json', 'Accept':'application/json', 'X-CSRF-TOKEN': CSRF },
-        body: JSON.stringify({ status: next }),
+        body:    JSON.stringify({ status: next }),
     })
     .then(r => r.json())
     .then(d => { if (!d.success) applyItemStatus(itemId, current); })
-    .catch(() => applyItemStatus(itemId, current));
+    .catch(()  => applyItemStatus(itemId, current));
 }
 
 function applyItemStatus(itemId, status) {
-    const btn = document.getElementById('btn-' + itemId);
+    const btn = document.getElementById('btn-'      + itemId);
     const row = document.getElementById('item-row-' + itemId);
     if (!btn || !row) return;
     btn.dataset.status = status;
@@ -186,70 +246,132 @@ function applyItemStatus(itemId, status) {
     row.className      = 'item-row' + (status === 'ready' ? ' item-done' : '');
 }
 
-/* ── Render nueva tarjeta ───────────────────────── */
+/* ── Toggle estado pedido (orden completa) ───────── */
+function toggleOrderStatus(orderId, btn) {
+    btn.disabled    = true;
+    btn.textContent = '…';
+
+    fetch(`/kitchen/orders/${orderId}/status`, {
+        method:  'PATCH',
+        headers: { 'Content-Type':'application/json', 'Accept':'application/json', 'X-CSRF-TOKEN': CSRF },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            applyOrderStatus(orderId, data.kitchen_status);
+        } else {
+            btn.disabled    = false;
+            btn.textContent = 'Marcar como listo';
+        }
+    })
+    .catch(() => {
+        btn.disabled    = false;
+        btn.textContent = 'Marcar como listo';
+    });
+}
+
+function applyOrderStatus(orderId, ks) {
+    const card = document.getElementById('card-order-' + orderId);
+    const btn  = document.getElementById('ks-btn-'     + orderId);
+    if (!card || !btn) return;
+
+    card.dataset.kitchenStatus = ks;
+
+    if (ks === 'listo') {
+        card.classList.add('card-listo');
+        btn.disabled    = true;
+        btn.textContent = '✓ Pedido listo';
+        btn.className   = 'btn-order-status btn-listo';
+        btn.removeAttribute('onclick');
+    } else {
+        card.classList.remove('card-listo');
+        btn.disabled    = false;
+        btn.textContent = 'Marcar como listo';
+        btn.className   = 'btn-order-status btn-en-proceso';
+        btn.setAttribute('onclick', `toggleOrderStatus(${orderId}, this)`);
+    }
+}
+
+/* ── Escape XSS para texto dinámico ──────────────── */
+function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Render tarjeta nueva (WebSocket) ────────────── */
 function renderCard(data) {
     const mins = data.opened_at
         ? Math.floor((Date.now() - new Date(data.opened_at).getTime()) / 60000) : 0;
     const tC = mins >= 30 ? 'time-urgent' : (mins >= 15 ? 'time-warning' : 'time-ok');
-    const cC = mins >= 30 ? 'urgent' : (mins >= 15 ? 'warning' : '');
+    const cC = mins >= 30 ? 'urgent'      : (mins >= 15 ? 'warning'      : '');
     const items = (data.items || []).map(i => `
         <div class="item-row" id="item-row-${i.id}">
             <span class="item-qty">${i.quantity}×</span>
-            <span class="item-name">${i.name}</span>
+            <div class="item-info">
+                <span class="item-name">${i.name}</span>
+                ${i.notes ? `<span class="item-note">⚠ ${escapeHtml(i.notes)}</span>` : ''}
+            </div>
             <button class="item-status-btn s-new" id="btn-${i.id}" data-status="new"
                     onclick="cycleStatus(${i.id},${data.order_id},${data.table_number})">NUEVO</button>
         </div>`).join('');
     const openedTime = data.opened_at
-        ? new Date(data.opened_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '—';
+        ? new Date(data.opened_at).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' }) : '—';
 
-    return `<div class="order-card ${cC}" id="card-order-${data.order_id}" data-table="${data.table_number}">
+    return `<div class="order-card ${cC}" id="card-order-${data.order_id}"
+                 data-table="${data.table_number}" data-kitchen-status="pendiente"
+                 data-opened-at="${data.opened_at || ''}">
         <div class="card-header">
             <div class="card-mesa">Mesa ${data.table_number}</div>
             <div class="card-time ${tC}" id="time-${data.order_id}">${mins}m</div>
         </div>
         <div class="card-items" id="items-${data.order_id}">${items}</div>
         <div class="card-footer">
-            <span id="footer-count-${data.order_id}">${(data.items||[]).length} ítem(s)</span>
-            <span>
-                <span id="ts-${data.order_id}" style="display:none" data-ts="${data.opened_at||''}"></span>
-                ${openedTime}
-            </span>
+            <span id="footer-count-${data.order_id}">${(data.items||[]).length} ítem(s) &nbsp;·&nbsp; ${openedTime}</span>
+            <button class="btn-order-status btn-en-proceso" id="ks-btn-${data.order_id}"
+                    onclick="toggleOrderStatus(${data.order_id}, this)">Marcar como listo</button>
         </div>
     </div>`;
 }
 
-/* ── Sync ítems de tarjeta existente ────────────── */
+/* ── Sync ítems en tarjeta existente ─────────────── */
 function syncItems(data) {
     const container = document.getElementById('items-' + data.order_id);
     if (!container) return;
+
     const existing = new Set([...container.querySelectorAll('[id^="item-row-"]')]
-        .map(el => parseInt(el.id.replace('item-row-','')))
-    );
-    const incoming = new Set((data.items||[]).map(i => i.id));
+        .map(el => parseInt(el.id.replace('item-row-', ''))));
+    const incoming = new Set((data.items || []).map(i => i.id));
 
     // Agregar nuevos
-    (data.items||[]).forEach(i => {
+    (data.items || []).forEach(i => {
         if (!existing.has(i.id)) {
             container.insertAdjacentHTML('beforeend', `
                 <div class="item-row" id="item-row-${i.id}">
                     <span class="item-qty">${i.quantity}×</span>
-                    <span class="item-name">${i.name}</span>
+                    <div class="item-info">
+                        <span class="item-name">${i.name}</span>
+                        ${i.notes ? `<span class="item-note">⚠ ${escapeHtml(i.notes)}</span>` : ''}
+                    </div>
                     <button class="item-status-btn s-new" id="btn-${i.id}" data-status="new"
                             onclick="cycleStatus(${i.id},${data.order_id},${data.table_number})">NUEVO</button>
                 </div>`);
         }
     });
     // Eliminar removidos
-    existing.forEach(id => { if (!incoming.has(id)) document.getElementById('item-row-'+id)?.remove(); });
+    existing.forEach(id => { if (!incoming.has(id)) document.getElementById('item-row-' + id)?.remove(); });
 
-    const fc = document.getElementById('footer-count-'+data.order_id);
-    if (fc) fc.textContent = `${(data.items||[]).length} ítem(s)`;
+    const fc = document.getElementById('footer-count-' + data.order_id);
+    if (fc) {
+        const openedTime = data.opened_at
+            ? new Date(data.opened_at).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' }) : '—';
+        fc.innerHTML = `${(data.items||[]).length} ítem(s) &nbsp;·&nbsp; ${openedTime}`;
+    }
 }
 
+/* ── Contador de mesas ───────────────────────────── */
 function updateMesasCount() {
     const count = document.querySelectorAll('.order-card').length;
-    const lbl = document.getElementById('lbl-mesas');
-    if (lbl) lbl.textContent = `${count} ${count===1?'mesa':'mesas'}`;
+    const lbl   = document.getElementById('lbl-mesas');
+    if (lbl) lbl.textContent = `${count} ${count === 1 ? 'mesa' : 'mesas'}`;
     if (count === 0) {
         const grid = document.getElementById('kds-grid');
         if (!grid.querySelector('.kds-empty')) {
@@ -260,37 +382,46 @@ function updateMesasCount() {
     }
 }
 
-/* ── Reloj de minutos ───────────────────────────── */
+/* ── Reloj de minutos ────────────────────────────── */
 setInterval(() => {
-    document.querySelectorAll('[id^="ts-"]').forEach(el => {
-        if (!el.dataset.ts) return;
-        const oid  = el.id.replace('ts-','');
-        const mins = Math.floor((Date.now() - new Date(el.dataset.ts).getTime()) / 60000);
-        const tEl  = document.getElementById('time-'+oid);
-        const cEl  = document.getElementById('card-order-'+oid);
-        if (tEl) { tEl.textContent = mins+'m'; tEl.className = 'card-time '+(mins>=30?'time-urgent':mins>=15?'time-warning':'time-ok'); }
-        if (cEl) { cEl.classList.toggle('urgent',mins>=30); cEl.classList.toggle('warning',mins>=15&&mins<30); }
+    document.querySelectorAll('.order-card').forEach(card => {
+        const oid  = card.id.replace('card-order-', '');
+        const ts   = card.dataset.openedAt;
+        if (!ts) return;
+        const mins = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+        const tEl  = document.getElementById('time-' + oid);
+        if (tEl) {
+            tEl.textContent = mins + 'm';
+            tEl.className   = 'card-time ' + (mins >= 30 ? 'time-urgent' : mins >= 15 ? 'time-warning' : 'time-ok');
+        }
+        card.classList.toggle('urgent',  mins >= 30);
+        card.classList.toggle('warning', mins >= 15 && mins < 30);
     });
 }, 30000);
 
-/* ── WebSocket Echo ─────────────────────────────── */
+/* ── WebSocket Echo ──────────────────────────────── */
 function initEcho() {
     if (typeof window.Echo === 'undefined') { setTimeout(initEcho, 500); return; }
     const badge = document.getElementById('ws-badge');
-    window.Echo.connector.pusher.connection.bind('connected',    () => { badge.textContent='⚡ En vivo'; badge.className='kds-badge badge-ws-on'; });
-    window.Echo.connector.pusher.connection.bind('disconnected', () => { badge.textContent='✕ Sin conexión'; badge.className='kds-badge badge-ws-off'; });
+    window.Echo.connector.pusher.connection.bind('connected',    () => {
+        badge.textContent = '⚡ En vivo';
+        badge.className   = 'kds-badge badge-ws-on';
+    });
+    window.Echo.connector.pusher.connection.bind('disconnected', () => {
+        badge.textContent = '✕ Sin conexión';
+        badge.className   = 'kds-badge badge-ws-off';
+    });
 
     window.Echo.channel('restaurant')
         .listen('.order.updated', (data) => {
-            const empty = document.getElementById('kds-empty-msg');
-            if (empty) empty.remove();
+            document.getElementById('kds-empty-msg')?.remove();
 
             if (data.action === 'closed' || data.action === 'cancelled') {
-                document.getElementById('card-order-'+data.order_id)?.remove();
+                document.getElementById('card-order-' + data.order_id)?.remove();
                 updateMesasCount();
                 return;
             }
-            if (document.getElementById('card-order-'+data.order_id)) {
+            if (document.getElementById('card-order-' + data.order_id)) {
                 syncItems(data);
             } else {
                 document.getElementById('kds-grid').insertAdjacentHTML('beforeend', renderCard(data));
@@ -301,6 +432,7 @@ function initEcho() {
             applyItemStatus(data.item_id, data.status);
         });
 }
+
 document.addEventListener('DOMContentLoaded', initEcho);
 </script>
 </body>

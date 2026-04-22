@@ -81,10 +81,24 @@ class OrderController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        broadcast(new OrderUpdatedEvent($order->fresh(['table', 'items.product']), 'closed'));
+        try { broadcast(new OrderUpdatedEvent($order->fresh(['table', 'items.product']), 'closed')); } catch (\Throwable) {}
 
         return redirect()->route('tickets.show', $order)
             ->with('success', 'Mesa cerrada correctamente.');
+    }
+
+    /**
+     * Mozo confirma entrega: kitchen_status → 'entregado'.
+     */
+    public function deliver(Order $order): \Illuminate\Http\JsonResponse
+    {
+        if (! $order->isOpen()) {
+            return response()->json(['error' => 'El pedido no está abierto.'], 422);
+        }
+
+        $order->update(['kitchen_status' => 'entregado']);
+
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -103,10 +117,12 @@ class OrderController extends Controller
 
         $this->orderService->cancelOrder($order);
 
-        broadcast(new OrderUpdatedEvent(
-            $order->setRelation('table', $order->table)->setRelation('items', collect()),
-            'cancelled'
-        ));
+        try {
+            broadcast(new OrderUpdatedEvent(
+                $order->setRelation('table', $order->table)->setRelation('items', collect()),
+                'cancelled'
+            ));
+        } catch (\Throwable) {}
 
         return redirect()->route('tables.index')
             ->with('success', "Pedido de Mesa {$mesa} cancelado.");

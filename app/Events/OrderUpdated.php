@@ -34,6 +34,7 @@ class OrderUpdated implements ShouldBroadcastNow
                 'quantity'   => $i->quantity,
                 'unit_price' => $i->unit_price,
                 'subtotal'   => $i->quantity * $i->unit_price,
+                'notes'      => $i->notes ?? null,
             ])->values(),
             'opened_at'   => $order->opened_at?->toIso8601String(),
         ];

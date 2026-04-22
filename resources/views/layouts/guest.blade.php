@@ -78,18 +78,13 @@
                 Sistema de Gestión POS<br>para mozos y administradores.
             </p>
 
-            <div style="display:flex;flex-direction:column;gap:.7rem;text-align:left;">
-                @foreach([
-                    ['🪑','Gestión de 40 mesas en tiempo real'],
-                    ['🧭','Pedidos y tickets en segundos'],
-                    ['📊','Reportes diarios y mensuales'],
-                    ['👨‍🍳','Vista de cocina en vivo'],
-                ] as [$ico,$txt])
-                    <div style="display:flex;align-items:center;gap:.7rem;font-size:.82rem;color:#6b7280;">
-                        <span style="color:#d97706;font-size:1.1rem;">{{ $ico }}</span>
-                        <span>{{ $txt }}</span>
-                    </div>
-                @endforeach
+            <div style="display:flex;flex-direction:column;gap:.55rem;text-align:center;margin-top:.25rem;">
+                <p style="font-size:.72rem;color:#374151;letter-spacing:.18em;text-transform:uppercase;margin:0;line-height:2.2;">
+                    Mesas &nbsp;&middot;&nbsp; Pedidos &nbsp;&middot;&nbsp; Cocina &nbsp;&middot;&nbsp; Reportes
+                </p>
+                <p style="font-size:.73rem;color:#374151;font-style:italic;margin:0;letter-spacing:.04em;line-height:1.6;">
+                    Operaciones eficientes, servicio excepcional.
+                </p>
             </div>
         </div>
 

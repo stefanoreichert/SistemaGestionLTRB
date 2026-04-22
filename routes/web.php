@@ -27,10 +27,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/tables', [TableController::class, 'index'])->name('tables.index');
         Route::get('/tables/{table}/order', [OrderController::class, 'show'])->name('orders.show');
         Route::get('/api/tables/{table}/summary', [OrderController::class, 'summary'])->name('orders.summary');
+        Route::get('/api/tables/statuses', [TableController::class, 'statuses'])->name('tables.statuses');
         Route::post('/orders/{order}/close', [OrderController::class, 'close'])->name('orders.close');
+        Route::patch('/orders/{order}/deliver', [OrderController::class, 'deliver'])->name('orders.deliver');
         Route::delete('/orders/{order}', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/tables/{table}/items', [OrderItemController::class, 'store'])->name('order-items.store');
         Route::put('/order-items/{item}', [OrderItemController::class, 'update'])->name('order-items.update');
+        Route::patch('/order-items/{item}/note', [OrderItemController::class, 'updateNote'])->name('order-items.note');
         Route::delete('/order-items/{item}', [OrderItemController::class, 'destroy'])->name('order-items.destroy');
     });
 
@@ -40,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin,cocina')->group(function () {
         Route::get('/kitchen', [KitchenController::class, 'index'])->name('kitchen');
         Route::put('/kitchen/items/{item}/status', [KitchenController::class, 'updateItemStatus'])->name('kitchen.item.status');
+        Route::patch('/kitchen/orders/{order}/status', [KitchenController::class, 'updateOrderStatus'])->name('kitchen.order.status');
     });
 
     // Admin only

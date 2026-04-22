@@ -26,8 +26,22 @@
             </div>
 
             @if($order)
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-                <form id="form-close" method="POST" action="{{ route('orders.close', $order) }}">@csrf</form>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+
+                {{-- Botón "Entregado" solo si kitchen_status = listo --}}
+                @if($order->kitchen_status === 'listo')
+                <button id="btn-entregar-header"
+                        onclick="marcarEntregado()"
+                        style="padding:.45rem .9rem;background:rgba(234,179,8,.18);color:#fef08a;
+                               border:1px solid rgba(234,179,8,.5);border-radius:.5rem;
+                               font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s;"
+                        onmouseover="this.style.background='rgba(234,179,8,.32)';"
+                        onmouseout="this.style.background='rgba(234,179,8,.18)';">
+                    ✓ Pedido entregado
+                </button>
+                @endif
+
+                @if(auth()->user()->isAdmin())
                 <button onclick="cerrarMesa()"
                         style="padding:.55rem 1.1rem;background:#059669;color:#fff;border:none;
                                border-radius:.6rem;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s;"
@@ -35,6 +49,17 @@
                         onmouseout="this.style.background='#059669';">
                     Cerrar e Imprimir
                 </button>
+                @else
+                <button onclick="cerrarMesaSinImprimir()"
+                        style="padding:.55rem 1.1rem;background:#059669;color:#fff;border:none;
+                               border-radius:.6rem;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s;"
+                        onmouseover="this.style.background='#047857';"
+                        onmouseout="this.style.background='#059669';">
+                    Cerrar Mesa
+                </button>
+                @endif
+
+                <form id="form-close" method="POST" action="{{ route('orders.close', $order) }}">@csrf</form>
                 <form id="form-cancel" method="POST" action="{{ route('orders.cancel', $order) }}">
                     @csrf @method('DELETE')
                 </form>
@@ -177,9 +202,23 @@
                     <tbody id="tabla-items">
                         @foreach($order->items as $item)
                         <tr id="row-{{ $item->id }}" class="item-row">
-                            <td style="padding-left:.875rem;color:#e5e7eb;font-weight:500;">
-                                {{ $item->product->name }}
-                                <span style="color:#4b5563;font-size:.68rem;margin-left:.25rem;">{{ $item->product->category ?? '' }}</span>
+                            <td style="padding-left:.875rem;">
+                                <div style="color:#e5e7eb;font-weight:500;font-size:.82rem;">
+                                    {{ $item->product->name }}
+                                    <span style="color:#4b5563;font-size:.68rem;margin-left:.25rem;">{{ $item->product->category ?? '' }}</span>
+                                </div>
+                                <div style="margin-top:.3rem;display:flex;align-items:center;gap:.3rem;">
+                                    <input type="text"
+                                           id="note-{{ $item->id }}"
+                                           value="{{ $item->notes ?? '' }}"
+                                           placeholder="Nota (ej: sin aderezos)…"
+                                           maxlength="255"
+                                           style="flex:1;background:#1a1a1a;border:1px solid #2a2a2a;color:#9ca3af;
+                                                  border-radius:.35rem;padding:.25rem .5rem;font-size:.7rem;
+                                                  font-style:italic;min-width:0;"
+                                           onfocus="this.style.borderColor='#d97706';this.style.color='#e5e7eb';"
+                                           onblur="this.style.borderColor='#2a2a2a';this.style.color='#9ca3af';guardarNota({{ $item->id }}, this.value);">
+                                </div>
                             </td>
                             <td style="text-align:center;">
                                 <input type="number" value="{{ $item->quantity }}" min="1" max="99"
@@ -366,9 +405,30 @@
             if (confirm('Cerrar la mesa e imprimir el ticket?')) document.getElementById('form-close').submit();
         }
 
+        function cerrarMesaSinImprimir() {
+            if (!orderId) { alert('No hay pedido abierto.'); return; }
+            if (confirm('Cerrar la mesa?')) document.getElementById('form-close').submit();
+        }
+
         function borrarPedido() {
             if (!orderId) { alert('No hay pedido activo.'); return; }
             if (confirm('Borrar el pedido completo? No se descontara stock.')) document.getElementById('form-cancel').submit();
+        }
+
+        async function marcarEntregado() {
+            if (!orderId) return;
+            const btn = document.getElementById('btn-entregar-header');
+            if (btn) { btn.disabled = true; btn.textContent = '…'; }
+            const resp = await apiRequest('/orders/' + orderId + '/deliver', 'PATCH', {});
+            if (resp.success) {
+                if (btn) btn.remove();
+            } else {
+                if (btn) { btn.disabled = false; btn.textContent = '✓ Pedido entregado'; }
+            }
+        }
+
+        async function guardarNota(itemId, nota) {
+            await apiRequest('/order-items/' + itemId + '/note', 'PATCH', { notes: nota });
         }
 
         document.addEventListener('keydown', e => {
