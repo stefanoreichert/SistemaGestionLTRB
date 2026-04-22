@@ -21,17 +21,20 @@ class OrderItemController extends Controller
      */
     public function store(AddOrderItemRequest $request, Table $table)
     {
-        $product = Product::findOrFail($request->product_id);
-        $order   = $this->orderService->getOrCreateOpenOrder($table);
-        $item    = $this->orderService->addItem($order, $product, $request->quantity);
+        $product    = Product::findOrFail($request->product_id);
+        $order      = $this->orderService->getOrCreateOpenOrder($table);
+        $isNewOrder = $order->wasRecentlyCreated;
+        $item       = $this->orderService->addItem($order, $product, $request->quantity);
 
-        try { broadcast(new OrderUpdatedEvent($order->fresh(['table', 'items.product']), 'updated')); } catch (\Throwable) {}
+        $order->load(['table', 'items.product']);
+        try { broadcast(new OrderUpdatedEvent($order, 'updated')); } catch (\Throwable) {}
 
         return response()->json([
-            'success'  => true,
-            'message'  => "'{$product->name}' agregado al pedido.",
-            'order_id' => $order->id,
-            'item'     => [
+            'success'      => true,
+            'message'      => "'{$product->name}' agregado al pedido.",
+            'order_id'     => $order->id,
+            'is_new_order' => $isNewOrder,
+            'item'         => [
                 'id'         => $item->id,
                 'product'    => $product->name,
                 'category'   => $product->category ?? '',

@@ -14,7 +14,9 @@
                     <div style="font-size:1.2rem;font-weight:800;color:#fbbf24;line-height:1.1;">
                         Mesa {{ $table->number }}
                     </div>
-                    <div style="font-size:.63rem;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-top:.1rem;">
+                    <div id="header-order-info"
+                         data-opened-at="{{ $order?->opened_at?->format('H:i') }}"
+                         style="font-size:.63rem;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-top:.1rem;">
                         @if($order)
                             {{ $order->items->count() }} item{{ $order->items->count() !== 1 ? 's' : '' }}
                             &bull; Abierto {{ $order->opened_at->format('H:i') }}
@@ -25,21 +27,19 @@
                 </div>
             </div>
 
-            @if($order)
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+            <div id="order-actions" style="{{ $order ? 'display:flex' : 'display:none' }};gap:.5rem;flex-wrap:wrap;align-items:center;">
 
-                {{-- Botón "Entregado" solo si kitchen_status = listo --}}
-                @if($order->kitchen_status === 'listo')
+                {{-- Botón "Entregado": visible solo cuando kitchen_status = listo --}}
                 <button id="btn-entregar-header"
                         onclick="marcarEntregado()"
                         style="padding:.45rem .9rem;background:rgba(234,179,8,.18);color:#fef08a;
                                border:1px solid rgba(234,179,8,.5);border-radius:.5rem;
-                               font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s;"
+                               font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s;
+                               {{ ($order && $order->kitchen_status === 'listo') ? '' : 'display:none;' }}"
                         onmouseover="this.style.background='rgba(234,179,8,.32)';"
                         onmouseout="this.style.background='rgba(234,179,8,.18)';">
                     ✓ Pedido entregado
                 </button>
-                @endif
 
                 @if(auth()->user()->isAdmin())
                 <button onclick="cerrarMesa()"
@@ -59,8 +59,8 @@
                 </button>
                 @endif
 
-                <form id="form-close" method="POST" action="{{ route('orders.close', $order) }}">@csrf</form>
-                <form id="form-cancel" method="POST" action="{{ route('orders.cancel', $order) }}">
+                <form id="form-close" method="POST" action="{{ $order ? route('orders.close', $order) : '#' }}">@csrf</form>
+                <form id="form-cancel" method="POST" action="{{ $order ? route('orders.cancel', $order) : '#' }}">
                     @csrf @method('DELETE')
                 </form>
                 <button onclick="borrarPedido()"
@@ -72,7 +72,6 @@
                     Cancelar Pedido
                 </button>
             </div>
-            @endif
         </div>
     </x-slot>
 
@@ -201,7 +200,7 @@
                     <tbody id="tabla-items">
                         @if($order)
                         @foreach($order->items as $item)
-                        <tr id="row-{{ $item->id }}" class="item-row">
+                        <tr id="row-{{ $item->id }}" class="item-row" data-product-id="{{ $item->product_id }}">
                             <td style="padding-left:.875rem;">
                                 <div style="color:#e5e7eb;font-weight:500;font-size:.82rem;">
                                     {{ $item->product->name }}
@@ -344,9 +343,10 @@
             for (const [grupo, prods] of Object.entries(grupos)) {
                 if (!filtroCategoria) html += '<div class="group-lbl">' + grupo + '</div>';
                 prods.forEach(p => {
-                    const n = p.name.replace(/'/g, "\\'");
-                    html += '<div class="prod-row" data-id="' + p.id + '" data-name="' + p.name + '" data-price="' + p.price + '"' +
-                            ' onclick="seleccionarProducto(' + p.id + ',\'' + n + '\',' + p.price + ')"' +
+                    const n   = p.name.replace(/'/g, "\\'");
+                    const cat = (p.category || '').replace(/'/g, "\\'");
+                    html += '<div class="prod-row" data-id="' + p.id + '" data-name="' + p.name + '" data-price="' + p.price + '" data-category="' + (p.category || '') + '"' +
+                            ' onclick="seleccionarProducto(' + p.id + ',\'' + n + '\',' + p.price + ',\'' + cat + '\')"' +
                             ' ondblclick="agregarDirecto(' + p.id + ',\'' + n + '\',' + p.price + ')">' +
                             '<div style="min-width:0;overflow:hidden;">' +
                             '<span class="prod-name">' + p.name + '</span>' +
@@ -358,11 +358,11 @@
             }
             container.innerHTML = html;
             const primero = container.querySelector('.prod-row');
-            if (primero) seleccionarProducto(+primero.dataset.id, primero.dataset.name, +primero.dataset.price);
+            if (primero) seleccionarProducto(+primero.dataset.id, primero.dataset.name, +primero.dataset.price, primero.dataset.category);
         }
 
-        function seleccionarProducto(id, name, price) {
-            productoSeleccionado = { id, name, price };
+        function seleccionarProducto(id, name, price, category) {
+            productoSeleccionado = { id, name, price, category: category || '' };
             document.querySelectorAll('.prod-row').forEach(r => r.classList.remove('selected'));
             const fila = document.querySelector('.prod-row[data-id="' + id + '"]');
             if (fila) { fila.classList.add('selected'); fila.scrollIntoView({ block: 'nearest' }); }
@@ -380,40 +380,130 @@
             await enviarItem(id, parseInt(document.getElementById('cantidad').value) || 1);
         }
 
-        /* ── Agregar ítem: sin reload si el pedido ya existe ── */
+        /* ── Agregar ítem: optimistic UI — sin ningún reload ──── */
         async function enviarItem(productId, qty) {
-            const resp = await apiRequest('/tables/' + mesaNum + '/items', 'POST', { product_id: productId, quantity: qty });
-            if (!resp.success) return;
+            const addBtn = document.querySelector('.add-btn');
+            if (addBtn) { addBtn.disabled = true; addBtn.textContent = '…'; }
 
-            // Primera vez que se crea el pedido → recargar para obtener
-            // los botones de cierre/cancelación en el header.
-            if (!orderId) {
-                location.reload();
+            // Buscar fila existente por producto (no por item ID)
+            const existingRow = document.querySelector('tr[data-product-id="' + productId + '"]');
+            let tmpId      = null;
+            let rollbackFn = null;
+
+            if (existingRow) {
+                // Producto ya en pedido → incrementar optimistamente
+                const qtyCell = existingRow.querySelector('.qty-cell');
+                const subEl   = existingRow.querySelector('[id^="subtotal-"]');
+                const prevQty = parseInt(qtyCell?.value || 0);
+                const prevSub = parseFloat(subEl?.dataset.value || 0);
+                const unitPrice = prevQty > 0 ? prevSub / prevQty : 0;
+                const newQty  = prevQty + qty;
+                const newSub  = Math.round(newQty * unitPrice);
+                if (qtyCell) qtyCell.value = newQty;
+                if (subEl)   { subEl.dataset.value = newSub; subEl.textContent = '$' + fmt(newSub); }
+                rollbackFn = () => {
+                    if (qtyCell) qtyCell.value = prevQty;
+                    if (subEl)   { subEl.dataset.value = prevSub; subEl.textContent = '$' + fmt(prevSub); }
+                };
+            } else {
+                // Producto nuevo → insertar fila temporal con opacidad reducida
+                tmpId = 'tmp-' + Date.now();
+                mostrarTabla();
+                appendItemRow({
+                    id:         tmpId,
+                    product:    productoSeleccionado.name,
+                    category:   productoSeleccionado.category || '',
+                    quantity:   qty,
+                    unit_price: productoSeleccionado.price,
+                    subtotal:   qty * productoSeleccionado.price,
+                    notes:      null,
+                }, productId);
+                rollbackFn = () => {
+                    document.getElementById('row-' + tmpId)?.remove();
+                    if (!document.getElementById('tabla-items')?.querySelector('tr')) mostrarVacio();
+                };
+            }
+
+            recalcularTotal();
+            actualizarHeaderInfoCount();
+
+            // Enviar al servidor
+            let resp;
+            try {
+                const r = await fetch('/tables/' + mesaNum + '/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
+                    body: JSON.stringify({ product_id: productId, quantity: qty })
+                });
+                resp = await r.json();
+            } catch {
+                rollbackFn?.();
+                recalcularTotal();
+                actualizarHeaderInfoCount();
+                alert('Error de conexión.');
+                if (addBtn) { addBtn.disabled = false; addBtn.textContent = '+ Agregar'; }
+                return;
+            }
+
+            if (!resp.success) {
+                rollbackFn?.();
+                recalcularTotal();
+                actualizarHeaderInfoCount();
+                alert(resp.message || 'Error al agregar producto.');
+                if (addBtn) { addBtn.disabled = false; addBtn.textContent = '+ Agregar'; }
                 return;
             }
 
             const item = resp.item;
-            const existingRow = document.getElementById('row-' + item.id);
+
+            // Si se creó un pedido nuevo, activar botones del header sin reload
+            if (resp.is_new_order) activarHeaderPedido(resp.order_id);
 
             if (existingRow) {
-                // Producto ya en pedido → actualizar cantidad y subtotal en DOM
-                const qtyInput = existingRow.querySelector('.qty-cell');
-                if (qtyInput) { qtyInput.value = item.quantity; qtyInput.defaultValue = item.quantity; }
-                const subEl = document.getElementById('subtotal-' + item.id);
-                if (subEl) { subEl.dataset.value = item.subtotal; subEl.textContent = '$' + fmt(item.subtotal); }
-            } else {
-                // Producto nuevo en el pedido → insertar fila en DOM
-                mostrarTabla();
-                appendItemRow(item);
+                // Confirmar con valores exactos del servidor
+                const qtyCell = existingRow.querySelector('.qty-cell');
+                const subEl   = existingRow.querySelector('[id^="subtotal-"]');
+                if (qtyCell) { qtyCell.value = item.quantity; qtyCell.defaultValue = item.quantity; }
+                if (subEl)   { subEl.dataset.value = item.subtotal; subEl.textContent = '$' + fmt(item.subtotal); }
+            } else if (tmpId) {
+                // Reemplazar fila temporal con datos reales del servidor
+                const tmpRow = document.getElementById('row-' + tmpId);
+                if (tmpRow) {
+                    tmpRow.id = 'row-' + item.id;
+                    tmpRow.style.opacity = '';
+                    const qCell = tmpRow.querySelector('.qty-cell');
+                    if (qCell) {
+                        qCell.value = item.quantity;
+                        qCell.defaultValue = item.quantity;
+                        qCell.setAttribute('onchange', 'actualizarCantidad(' + item.id + ', this.value, this)');
+                    }
+                    const sEl = tmpRow.querySelector('[id^="subtotal-"]');
+                    if (sEl) {
+                        sEl.id = 'subtotal-' + item.id;
+                        sEl.dataset.value = item.subtotal;
+                        sEl.textContent = '$' + fmt(item.subtotal);
+                    }
+                    const dBtn = tmpRow.querySelector('.del-btn');
+                    if (dBtn) dBtn.setAttribute('onclick', 'eliminarItem(' + item.id + ')');
+                    const nInp = tmpRow.querySelector('input[id^="note-"]');
+                    if (nInp) {
+                        nInp.id = 'note-' + item.id;
+                        nInp.setAttribute('onblur', 'this.style.borderColor=\'#2a2a2a\';this.style.color=\'#9ca3af\';guardarNota(' + item.id + ', this.value);');
+                    }
+                }
             }
 
             recalcularTotal();
+            actualizarHeaderInfoCount();
+            if (addBtn) { addBtn.disabled = false; addBtn.textContent = '+ Agregar'; }
         }
 
         /* ── Construir y agregar una fila al tbody ───────── */
-        function appendItemRow(item) {
+        function appendItemRow(item, productId = null) {
             const tbody = document.getElementById('tabla-items');
             if (!tbody) return;
+
+            const isTemp = String(item.id).startsWith('tmp-');
 
             const noteHtml = item.category !== 'Bebida'
                 ? `<div style="margin-top:.3rem;display:flex;align-items:center;gap:.3rem;">
@@ -431,8 +521,10 @@
                 : '';
 
             const tr = document.createElement('tr');
-            tr.id        = 'row-' + item.id;
-            tr.className = 'item-row';
+            tr.id              = 'row-' + item.id;
+            tr.className       = 'item-row';
+            tr.dataset.productId = productId !== null ? String(productId) : '';
+            if (isTemp) tr.style.opacity = '0.55';
             tr.innerHTML = `
                 <td style="padding-left:.875rem;">
                     <div style="color:#e5e7eb;font-weight:500;font-size:.82rem;">
@@ -494,6 +586,34 @@
             document.getElementById('total-display').textContent = '$' + fmt(t);
         }
 
+        /* ── Activar header al crear el primer pedido (sin reload) ─ */
+        function activarHeaderPedido(newOrderId) {
+            orderId = newOrderId;
+            const div = document.getElementById('order-actions');
+            if (div) div.style.display = 'flex';
+            const fClose = document.getElementById('form-close');
+            if (fClose) fClose.setAttribute('action', '/orders/' + newOrderId + '/close');
+            const fCancel = document.getElementById('form-cancel');
+            if (fCancel) fCancel.setAttribute('action', '/orders/' + newOrderId);
+            const infoEl = document.getElementById('header-order-info');
+            if (infoEl) {
+                const d = new Date();
+                const hhmm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                infoEl.dataset.openedAt = hhmm;
+                infoEl.innerHTML = '1 item &bull; Abierto ' + hhmm;
+            }
+        }
+
+        /* ── Actualizar conteo de ítems en el subtitulo del header ─ */
+        function actualizarHeaderInfoCount() {
+            if (!orderId) return;
+            const infoEl = document.getElementById('header-order-info');
+            if (!infoEl) return;
+            const count = document.getElementById('tabla-items')?.querySelectorAll('tr').length ?? 0;
+            const hhmm  = infoEl.dataset.openedAt || '';
+            infoEl.innerHTML = count + ' item' + (count !== 1 ? 's' : '') + (hhmm ? ' &bull; Abierto ' + hhmm : '');
+        }
+
         /* ── Eliminar ítem: sin reload salvo último ítem ─── */
         async function eliminarItem(id) {
             if (!confirm('¿Eliminar este item?')) return;
@@ -511,6 +631,7 @@
             }
 
             recalcularTotal();
+            actualizarHeaderInfoCount();
         }
 
         /* ── Acciones del header ─────────────────────────── */
