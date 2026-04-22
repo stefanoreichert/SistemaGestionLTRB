@@ -19,8 +19,17 @@
             <div style="display:flex; align-items:center; gap:0.35rem;">
                 <span id="ws-indicator" style="width:8px; height:8px; border-radius:50%; background:#4b5563;"
                       title="Estado WebSocket"></span>
-                <span style="font-size:0.7rem; color:#4b5563;" id="ws-label">Conectando…</span>
+                <span style="font-size:0.7rem; color:#4b5563;" id="ws-label">Conectando&hellip;</span>
             </div>
+
+            <button onclick="abrirModalDelivery()"
+                    style="padding:.4rem .9rem; background:rgba(139,92,246,.18); color:#c4b5fd;
+                           border:1px solid rgba(139,92,246,.45); border-radius:.5rem;
+                           font-size:.78rem; font-weight:700; cursor:pointer; transition:all .15s;"
+                    onmouseover="this.style.background='rgba(139,92,246,.32)'"
+                    onmouseout="this.style.background='rgba(139,92,246,.18)'">
+                + Nuevo Delivery
+            </button>
 
         </div>
     </x-slot>
@@ -97,6 +106,31 @@
         }
         .btn-entregar:hover { background: rgba(234,179,8,.38); }
         .btn-entregar-hidden { display: none !important; }
+
+        /* ── Delivery cards ──────────────────────────────── */
+        .delivery-card {
+            border-radius:.875rem; border:2px solid rgba(139,92,246,.45);
+            padding:.875rem .75rem; background:rgba(60,20,120,.28);
+            color:#c4b5fd; cursor:pointer; transition:transform .15s,box-shadow .15s;
+            user-select:none;
+        }
+        .delivery-card:hover {
+            background:rgba(60,20,120,.5); border-color:#8b5cf6;
+            transform:scale(1.04); box-shadow:0 0 18px rgba(139,92,246,.3);
+        }
+        .delivery-label { font-size:1rem; font-weight:800; line-height:1.1; }
+        .delivery-meta  { font-size:.62rem; color:#a78bfa; margin-top:.25rem;
+                          text-transform:uppercase; letter-spacing:.07em; }
+        .btn-del-entregar {
+            display:block; width:100%; margin-top:.45rem; padding:.3rem .4rem;
+            font-size:.58rem; font-weight:700; letter-spacing:.05em;
+            text-transform:uppercase; cursor:pointer;
+            background:rgba(139,92,246,.22); color:#c4b5fd;
+            border:1px solid rgba(139,92,246,.5); border-radius:.35rem;
+            transition:background .15s;
+        }
+        .btn-del-entregar:hover { background:rgba(139,92,246,.4); }
+        .btn-del-entregar-hidden { display:none !important; }
     </style>
 
     <div style="padding:1.25rem;">
@@ -157,6 +191,24 @@
         <p style="text-align:center; font-size:0.7rem; color:#374151; margin-top:1.5rem;">
             Click = abrir mesa &nbsp;&bull;&nbsp; Doble click = resumen rápido
         </p>
+
+        {{-- Sección Deliveries --}}
+        <div id="deliveries-section" style="margin-top:1.75rem;">
+            <h2 style="font-size:.78rem; font-weight:700; color:#a78bfa; text-transform:uppercase;
+                       letter-spacing:.1em; margin-bottom:.75rem;">
+                🛵 Deliveries activos
+                <span id="delivery-count" style="margin-left:.5rem; font-size:.7rem;
+                      background:rgba(139,92,246,.25); color:#c4b5fd; padding:.1rem .5rem;
+                      border-radius:1rem;">0</span>
+            </h2>
+            <div id="deliveries-list"
+                 style="display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:.6rem;">
+                <p id="deliveries-empty"
+                   style="color:#4b5563; font-style:italic; font-size:.8rem; grid-column:1/-1;">
+                    Sin deliveries activos.
+                </p>
+            </div>
+        </div>
     </div>
 
     <style>
@@ -165,7 +217,43 @@
         @media (min-width:900px)  { .mesas-grid { grid-template-columns: repeat(10,1fr)!important; } }
     </style>
 
-    {{-- Modal de resumen rápido --}}
+    {{-- Modal Nuevo Delivery --}}
+    <div id="modal-delivery"
+         style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.78);
+                z-index:110; align-items:center; justify-content:center; padding:1rem;"
+         onclick="cerrarModalDelivery()">
+        <div style="background:#161616; border:1px solid rgba(139,92,246,.4); border-radius:1rem;
+                    box-shadow:0 25px 60px rgba(0,0,0,.7); padding:1.5rem; max-width:22rem; width:100%;"
+             onclick="event.stopPropagation()">
+            <h3 style="font-weight:800; font-size:1rem; color:#a78bfa; margin-bottom:.1rem;">🛵 Nuevo Delivery</h3>
+            <p style="font-size:.75rem; color:#6b7280; margin-bottom:1rem;">Nombre del cliente o número de referencia</p>
+
+            <input id="delivery-label-input"
+                   type="text" maxlength="100" placeholder="Ej: Juan García, Pedido #12…"
+                   style="width:100%; box-sizing:border-box; background:#1e1e1e; border:1px solid #333;
+                          color:#e5e7eb; border-radius:.5rem; padding:.6rem .75rem; font-size:.88rem;
+                          margin-bottom:1rem;"
+                   onfocus="this.style.borderColor='#8b5cf6'"
+                   onblur="this.style.borderColor='#333'"
+                   onkeydown="if(event.key==='Enter') confirmarDelivery()">
+
+            <div style="display:flex; gap:.5rem; justify-content:flex-end;">
+                <button onclick="cerrarModalDelivery()"
+                        style="padding:.5rem 1rem; font-size:.78rem; color:#9ca3af;
+                               border:1px solid #333; border-radius:.5rem; background:#1a1a1a; cursor:pointer;"
+                        onmouseover="this.style.background='#222'"
+                        onmouseout="this.style.background='#1a1a1a'">Cancelar</button>
+                <button onclick="confirmarDelivery()"
+                        style="padding:.5rem 1.1rem; font-size:.78rem; color:#fff;
+                               background:#7c3aed; border:none; border-radius:.5rem;
+                               font-weight:700; cursor:pointer;"
+                        onmouseover="this.style.background='#8b5cf6'"
+                        onmouseout="this.style.background='#7c3aed'">Crear Delivery</button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal resumen rápido --}}
     <div id="modal-resumen"
          style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75);
                 z-index:100; align-items:center; justify-content:center; padding:1rem;"
@@ -378,7 +466,135 @@
 
         function fmt(n) { return parseFloat(n).toLocaleString('es-AR'); }
 
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+        /* ── Delivery: modal ────────────────────────────────── */
+        function abrirModalDelivery() {
+            const inp = document.getElementById('delivery-label-input');
+            inp.value = '';
+            document.getElementById('modal-delivery').style.display = 'flex';
+            setTimeout(() => inp.focus(), 60);
+        }
+
+        function cerrarModalDelivery() {
+            document.getElementById('modal-delivery').style.display = 'none';
+        }
+
+        async function confirmarDelivery() {
+            const inp   = document.getElementById('delivery-label-input');
+            const label = inp.value.trim();
+            if (!label) { inp.focus(); return; }
+
+            const r    = await fetch('/api/deliveries', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
+                body: JSON.stringify({ label })
+            });
+            const data = await r.json();
+            if (data.success) {
+                cerrarModalDelivery();
+                window.location.href = data.url;
+            } else {
+                alert('Error al crear el delivery.');
+            }
+        }
+
+        /* ── Delivery: lista ────────────────────────────────── */
+        function escapeHtmlDel(str) {
+            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        function abrirDelivery(orderId) {
+            window.location.href = '/deliveries/' + orderId;
+        }
+
+        async function entregarDelivery(orderId, btn) {
+            btn.disabled    = true;
+            btn.textContent = '…';
+            try {
+                const r = await fetch('/deliveries/' + orderId + '/deliver', {
+                    method: 'PATCH',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
+                });
+                const data = await r.json();
+                if (data.success) {
+                    document.getElementById('del-card-' + orderId)?.remove();
+                    updateDeliveryCount();
+                } else {
+                    btn.disabled    = false;
+                    btn.textContent = 'Entregar';
+                }
+            } catch {
+                btn.disabled    = false;
+                btn.textContent = 'Entregar';
+            }
+        }
+
+        function renderDeliveryCard(d) {
+            const isListo = d.kitchen_status === 'listo';
+            const card = document.createElement('div');
+            card.id          = 'del-card-' + d.order_id;
+            card.className   = 'delivery-card';
+            card.title       = 'Abrir delivery: ' + escapeHtmlDel(d.delivery_label);
+            card.onclick     = () => abrirDelivery(d.order_id);
+            card.innerHTML   = `
+                <div class="delivery-label">\ud83d\udef5 ${escapeHtmlDel(d.delivery_label)}</div>
+                <div class="delivery-meta">${d.items_count} item${d.items_count !== 1 ? 's' : ''} &bull; ${d.opened_time || ''}</div>
+                <button id="del-ent-${d.order_id}"
+                        class="btn-del-entregar ${isListo ? '' : 'btn-del-entregar-hidden'}"
+                        onclick="event.stopPropagation(); entregarDelivery(${d.order_id}, this)">
+                    Entregar
+                </button>`;
+            return card;
+        }
+
+        function updateDeliveryCount() {
+            const count = document.querySelectorAll('.delivery-card').length;
+            document.getElementById('delivery-count').textContent = count;
+            document.getElementById('deliveries-empty').style.display = count ? 'none' : '';
+        }
+
+        function handleDeliveryUpdate(data) {
+            if (data.action === 'entregado' || data.action === 'closed' || data.action === 'cancelled') {
+                document.getElementById('del-card-' + data.order_id)?.remove();
+                updateDeliveryCount();
+                return;
+            }
+            // updated → actualizar o insertar tarjeta
+            const existing = document.getElementById('del-card-' + data.order_id);
+            const isListo  = data.kitchen_status === 'listo';
+            if (existing) {
+                const btnEnt = document.getElementById('del-ent-' + data.order_id);
+                if (btnEnt) {
+                    if (isListo) btnEnt.classList.remove('btn-del-entregar-hidden');
+                    else         btnEnt.classList.add('btn-del-entregar-hidden');
+                }
+            } else {
+                const newCard = renderDeliveryCard({
+                    order_id:       data.order_id,
+                    delivery_label: data.delivery_label,
+                    kitchen_status: data.kitchen_status ?? 'pendiente',
+                    items_count:    data.items_count ?? 0,
+                    opened_time:    data.opened_at ? new Date(data.opened_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '',
+                });
+                const list = document.getElementById('deliveries-list');
+                if (list) list.appendChild(newCard);
+            }
+            updateDeliveryCount();
+        }
+
+        async function loadDeliveries() {
+            try {
+                const r    = await fetch('/api/deliveries', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
+                const list = await r.json();
+                const container = document.getElementById('deliveries-list');
+                // Limpiar tarjetas existentes (conservar el párrafo vacío)
+                container.querySelectorAll('.delivery-card').forEach(c => c.remove());
+                list.forEach(d => container.appendChild(renderDeliveryCard(d)));
+                updateDeliveryCount();
+            } catch { /* silencioso */ }
+        }
+
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { cerrarModal(); cerrarModalDelivery(); } });
 
         /* ── WebSocket: tiempo real ─────────────────────────── */
         function initEcho() {
@@ -408,6 +624,10 @@
 
             window.Echo.channel('restaurant')
                 .listen('.order.updated', (data) => {
+                    if (data.is_delivery) {
+                        handleDeliveryUpdate(data);
+                        return;
+                    }
                     const tableNum = data.table_number;
                     if (!tableNum) return;
                     if (data.action === 'updated') {
@@ -422,6 +642,9 @@
             initEcho();
             // Polling cada 5 segundos para sincronizar kitchen_status
             setInterval(pollKitchenStatus, 5000);
+            // Cargar deliveries al inicio y refrescar cada 10 s
+            loadDeliveries();
+            setInterval(loadDeliveries, 10000);
         });
     </script>
 </x-app-layout>

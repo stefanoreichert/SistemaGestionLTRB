@@ -122,7 +122,29 @@
             padding: 4rem 1rem; color: #374151;
         }
         .kds-empty span { font-size: 3rem; display: block; margin-bottom: 0.75rem; }
-    </style>
+        /* ── Delivery en KDS ─────────────────────────── */
+        .delivery-card { border-color: rgba(139,92,246,.5) !important; background: rgba(60,20,120,.25); }
+        .delivery-mesa { color: #a78bfa; }
+
+        /* ── Sección Entregados ───────────────────────── */
+        #entregados-section {
+            padding: .75rem 1rem 1.5rem;
+            border-top: 1px solid #1f1f1f;
+            display: none;
+        }
+        .entregados-title {
+            font-size:.72rem; font-weight:700; color:#4b5563;
+            text-transform:uppercase; letter-spacing:.1em;
+            margin-bottom:.65rem;
+        }
+        .entregados-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.5rem; }
+        .entregado-card {
+            background:rgba(5,78,40,.2); border:1px solid rgba(16,185,129,.25);
+            border-radius:.65rem; padding:.6rem .8rem; opacity:.75;
+            display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+        }
+        .entregado-label { font-size:.8rem; font-weight:700; color:#6ee7b7; }
+        .entregado-time  { font-size:.65rem; color:#4b5563; }    </style>
 </head>
 <body>
 
@@ -150,14 +172,20 @@
         $isListo = $ks === 'listo';
     @endphp
 
-    <div class="order-card {{ $cClass }} {{ $isListo ? 'card-listo' : '' }}"
+    <div class="order-card {{ $cClass }} {{ $isListo ? 'card-listo' : '' }} {{ $order->is_delivery ? 'delivery-card' : '' }}"
          id="card-order-{{ $order->id }}"
-         data-table="{{ $order->table->number }}"
+         data-table="{{ $order->is_delivery ? 0 : $order->table->number }}"
          data-kitchen-status="{{ $ks }}"
          data-opened-at="{{ $order->opened_at?->toIso8601String() }}">
 
         <div class="card-header">
-            <div class="card-mesa">Mesa {{ $order->table->number }}</div>
+            <div class="card-mesa {{ $order->is_delivery ? 'delivery-mesa' : '' }}">
+                @if($order->is_delivery)
+                    🛵 {{ $order->delivery_label }}
+                @else
+                    Mesa {{ $order->table->number }}
+                @endif
+            </div>
             <div class="card-time {{ $tClass }}" id="time-{{ $order->id }}">{{ $mins }}m</div>
         </div>
 
@@ -176,7 +204,7 @@
                     <button class="item-status-btn s-{{ $itemKs }}"
                             id="btn-{{ $item->id }}"
                             data-status="{{ $itemKs }}"
-                            onclick="cycleStatus({{ $item->id }}, {{ $order->id }}, {{ $order->table->number }})">
+                            onclick="cycleStatus({{ $item->id }}, {{ $order->id }}, {{ $order->is_delivery ? 0 : $order->table->number }})">
                         {{ $itemKs === 'new' ? 'NUEVO' : ($itemKs === 'preparing' ? 'PREP.' : 'LISTO') }}
                     </button>
                 </div>
@@ -212,6 +240,19 @@
 @endforelse
 
 </main>
+
+<section id="entregados-section">
+    <div class="entregados-title">
+        ✓ Entregados recientemente
+        <button onclick="limpiarEntregados()"
+                style="margin-left:.75rem;font-size:.65rem;color:#6b7280;background:none;
+                       border:1px solid #333;border-radius:.35rem;padding:.15rem .45rem;
+                       cursor:pointer;"
+                onmouseover="this.style.color='#9ca3af'"
+                onmouseout="this.style.color='#6b7280'">Limpiar</button>
+    </div>
+    <div class="entregados-grid" id="entregados-list"></div>
+</section>
 
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
@@ -297,6 +338,23 @@ function applyOrderStatus(orderId, ks) {
     }
 }
 
+/* ── Toast de notificación ──────────────────────── */
+function showToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = [
+        'position:fixed', 'bottom:1.5rem', 'right:1.5rem', 'z-index:999',
+        'background:#065f46', 'color:#6ee7b7',
+        'border:1px solid rgba(52,211,153,.4)',
+        'padding:.65rem 1.1rem', 'border-radius:.6rem',
+        'font-size:.82rem', 'font-weight:700',
+        'box-shadow:0 4px 20px rgba(0,0,0,.5)',
+        'transition:opacity .4s', 'opacity:1',
+    ].join(';');
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 420); }, 3000);
+}
+
 /* ── Escape XSS para texto dinámico ──────────────── */
 function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -311,6 +369,14 @@ function renderCard(data) {
         ? Math.floor((Date.now() - new Date(data.opened_at).getTime()) / 60000) : 0;
     const tC = mins >= 30 ? 'time-urgent' : (mins >= 15 ? 'time-warning' : 'time-ok');
     const cC = mins >= 30 ? 'urgent'      : (mins >= 15 ? 'warning'      : '');
+
+    const isDelivery  = !!data.is_delivery;
+    const mesaLabel   = isDelivery
+        ? `🛵 ${escapeHtml(data.delivery_label || '')}`
+        : `Mesa ${data.table_number}`;
+    const mesaClass   = isDelivery ? 'card-mesa delivery-mesa' : 'card-mesa';
+    const cardExtra   = isDelivery ? ' delivery-card' : '';
+
     const items = comidaItems.map(i => `
         <div class="item-row" id="item-row-${i.id}">
             <span class="item-qty">${i.quantity}×</span>
@@ -319,16 +385,16 @@ function renderCard(data) {
                 ${i.notes ? `<span class="item-note">⚠ ${escapeHtml(i.notes)}</span>` : ''}
             </div>
             <button class="item-status-btn s-new" id="btn-${i.id}" data-status="new"
-                    onclick="cycleStatus(${i.id},${data.order_id},${data.table_number})">NUEVO</button>
+                    onclick="cycleStatus(${i.id},${data.order_id},${data.table_number ?? 0})">NUEVO</button>
         </div>`).join('');
     const openedTime = data.opened_at
         ? new Date(data.opened_at).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' }) : '—';
 
-    return `<div class="order-card ${cC}" id="card-order-${data.order_id}"
-                 data-table="${data.table_number}" data-kitchen-status="pendiente"
+    return `<div class="order-card ${cC}${cardExtra}" id="card-order-${data.order_id}"
+                 data-table="${data.table_number ?? 0}" data-kitchen-status="pendiente"
                  data-opened-at="${data.opened_at || ''}">
         <div class="card-header">
-            <div class="card-mesa">Mesa ${data.table_number}</div>
+            <div class="${mesaClass}">${mesaLabel}</div>
             <div class="card-time ${tC}" id="time-${data.order_id}">${mins}m</div>
         </div>
         <div class="card-items" id="items-${data.order_id}">${items}</div>
@@ -433,6 +499,22 @@ function initEcho() {
                 return;
             }
 
+            if (data.action === 'entregado') {
+                const card = document.getElementById('card-order-' + data.order_id);
+                if (card) {
+                    const label = data.is_delivery
+                        ? '🛵 ' + (data.delivery_label || 'Delivery')
+                        : 'Mesa ' + data.table_number;
+                    showToast('✓ ' + label + ' — Pedido entregado');
+                    addToEntregados(data);
+                    card.style.transition = 'opacity .6s, transform .6s';
+                    card.style.opacity    = '0';
+                    card.style.transform  = 'scale(.97)';
+                    setTimeout(() => { card.remove(); updateMesasCount(); }, 650);
+                }
+                return;
+            }
+
             // Solo procesar si hay ítems de comida
             const comidaItems = soloComida(data.items);
 
@@ -458,43 +540,62 @@ function initEcho() {
 }
 
 document.addEventListener('DOMContentLoaded', initEcho);
-</script>
 
-/* ── WebSocket Echo ──────────────────────────────── */
-function initEcho() {
-    if (typeof window.Echo === 'undefined') { setTimeout(initEcho, 500); return; }
-    const badge = document.getElementById('ws-badge');
-    window.Echo.connector.pusher.connection.bind('connected',    () => {
-        badge.textContent = '⚡ En vivo';
-        badge.className   = 'kds-badge badge-ws-on';
-    });
-    window.Echo.connector.pusher.connection.bind('disconnected', () => {
-        badge.textContent = '✕ Sin conexión';
-        badge.className   = 'kds-badge badge-ws-off';
-    });
-
-    window.Echo.channel('restaurant')
-        .listen('.order.updated', (data) => {
-            document.getElementById('kds-empty-msg')?.remove();
-
-            if (data.action === 'closed' || data.action === 'cancelled') {
-                document.getElementById('card-order-' + data.order_id)?.remove();
-                updateMesasCount();
-                return;
+/* ── Polling de respaldo (cubre fallos de WebSocket) ── */
+function pollActiveOrders() {
+    fetch('/api/kitchen/active-ids', {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+    })
+    .then(r => r.json())
+    .then(ids => {
+        const activeSet = new Set(ids.map(String));
+        document.querySelectorAll('.order-card').forEach(card => {
+            const oid = card.id.replace('card-order-', '');
+            if (!activeSet.has(oid)) {
+                card.style.transition = 'opacity .5s, transform .5s';
+                card.style.opacity    = '0';
+                card.style.transform  = 'scale(.97)';
+                setTimeout(() => { card.remove(); updateMesasCount(); }, 520);
             }
-            if (document.getElementById('card-order-' + data.order_id)) {
-                syncItems(data);
-            } else {
-                document.getElementById('kds-grid').insertAdjacentHTML('beforeend', renderCard(data));
-                updateMesasCount();
-            }
-        })
-        .listen('.kitchen.status', (data) => {
-            applyItemStatus(data.item_id, data.status);
         });
+    })
+    .catch(() => {/* silencioso */});
+}
+setInterval(pollActiveOrders, 8000);
+
+/* ── Sección Entregados ──────────────────────────── */
+function addToEntregados(data) {
+    const list = document.getElementById('entregados-list');
+    if (!list) return;
+
+    const label = data.is_delivery
+        ? '🛵 ' + escapeHtml(data.delivery_label || 'Delivery')
+        : 'Mesa ' + data.table_number;
+    const now = new Date().toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+
+    const card = document.createElement('div');
+    card.className = 'entregado-card';
+    card.dataset.orderId = data.order_id;
+    card.innerHTML = `<span class="entregado-label">${label}</span>
+                      <span class="entregado-time">${now}</span>`;
+    list.appendChild(card);
+    updateEntregadosSection();
+
+    // Auto-eliminar después de 5 minutos
+    setTimeout(() => { card.remove(); updateEntregadosSection(); }, 5 * 60 * 1000);
 }
 
-document.addEventListener('DOMContentLoaded', initEcho);
+function updateEntregadosSection() {
+    const section = document.getElementById('entregados-section');
+    if (!section) return;
+    const count = document.querySelectorAll('.entregado-card').length;
+    section.style.display = count ? 'block' : 'none';
+}
+
+function limpiarEntregados() {
+    document.getElementById('entregados-list')?.querySelectorAll('.entregado-card').forEach(c => c.remove());
+    updateEntregadosSection();
+}
 </script>
 </body>
 </html>

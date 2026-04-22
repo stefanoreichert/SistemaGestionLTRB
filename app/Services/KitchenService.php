@@ -16,6 +16,7 @@ class KitchenService
     {
         $orders = Order::with(['table', 'items.product'])
             ->where('status', 'open')
+            ->whereNotIn('kitchen_status', ['entregado'])
             ->orderBy('opened_at')
             ->get();
 

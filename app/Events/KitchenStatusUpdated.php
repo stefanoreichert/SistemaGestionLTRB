@@ -18,10 +18,10 @@ class KitchenStatusUpdated implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public function __construct(
-        public readonly int    $itemId,
-        public readonly int    $tableNumber,
-        public readonly int    $orderId,
-        public readonly string $status,   // 'new' | 'preparing' | 'ready'
+        public readonly int     $itemId,
+        public readonly ?int    $tableNumber,
+        public readonly int     $orderId,
+        public readonly string  $status,
     ) {}
 
     public function broadcastOn(): array

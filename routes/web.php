@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemController;
@@ -35,6 +36,13 @@ Route::middleware('auth')->group(function () {
         Route::put('/order-items/{item}', [OrderItemController::class, 'update'])->name('order-items.update');
         Route::patch('/order-items/{item}/note', [OrderItemController::class, 'updateNote'])->name('order-items.note');
         Route::delete('/order-items/{item}', [OrderItemController::class, 'destroy'])->name('order-items.destroy');
+
+        // Delivery
+        Route::post('/api/deliveries', [DeliveryController::class, 'store'])->name('deliveries.store');
+        Route::get('/api/deliveries', [DeliveryController::class, 'apiIndex'])->name('deliveries.index');
+        Route::get('/deliveries/{order}', [DeliveryController::class, 'show'])->name('deliveries.show');
+        Route::post('/deliveries/{order}/items', [OrderItemController::class, 'storeForDelivery'])->name('delivery-items.store');
+        Route::patch('/deliveries/{order}/deliver', [OrderController::class, 'deliver'])->name('deliveries.deliver');
     });
 
     Route::middleware('role:admin,mozo')->get('/api/products', [ProductController::class, 'index'])->name('products.json');
@@ -42,6 +50,7 @@ Route::middleware('auth')->group(function () {
     // Cocina (cocina + admin)
     Route::middleware('role:admin,cocina')->group(function () {
         Route::get('/kitchen', [KitchenController::class, 'index'])->name('kitchen');
+        Route::get('/api/kitchen/active-ids', [KitchenController::class, 'activeOrderIds'])->name('kitchen.active-ids');
         Route::put('/kitchen/items/{item}/status', [KitchenController::class, 'updateItemStatus'])->name('kitchen.item.status');
         Route::patch('/kitchen/orders/{order}/status', [KitchenController::class, 'updateOrderStatus'])->name('kitchen.order.status');
     });

@@ -75,7 +75,7 @@ class OrderService
         $order = $item->order()->with('table')->first();
         $item->delete();
 
-        if ($order && $order->items()->count() === 0) {
+        if ($order && $order->items()->count() === 0 && $order->table) {
             $order->table->update(['status' => 'free']);
         }
     }
@@ -92,17 +92,16 @@ class OrderService
                 'status'    => 'cancelled',
                 'closed_at' => now(),
             ]);
-            $order->table->update(['status' => 'free']);
+            if ($order->table) {
+                $order->table->update(['status' => 'free']);
+            }
         });
     }
 
     /**
      * Cerrar un pedido: validar stock → descontar stock → calcular total →
-     * marcar como cerrado → liberar mesa.
+     * marcar como cerrado → liberar mesa (si aplica).
      * Todo en una única transacción atómica.
-     *
-     * Corrige Bug #1 (doble descuento), Bug #3 (subquery inválido) y
-     * Problema de arquitectura #4 (sin transacciones) del sistema legado.
      */
     public function closeOrder(Order $order): void
     {
@@ -119,12 +118,12 @@ class OrderService
                 }
             }
 
-            // ── 2. Descontar stock (único lugar donde se hace, Bug #1 del legado) ─
+            // ── 2. Descontar stock ──────────────────────────────────────────
             foreach ($order->items as $item) {
                 $item->product->decrement('stock', $item->quantity);
             }
 
-            // ── 3. Calcular total usando unit_price histórico ───────────────
+            // ── 3. Calcular total ───────────────────────────────────────────
             $total = $order->items->sum(
                 fn(OrderItem $i) => $i->quantity * $i->unit_price
             );
@@ -136,8 +135,27 @@ class OrderService
                 'closed_at' => now(),
             ]);
 
-            // ── 5. Liberar la mesa ──────────────────────────────────────────
-            $order->table->update(['status' => 'free']);
+            // ── 5. Liberar la mesa (solo si el pedido tiene mesa física) ────
+            if ($order->table) {
+                $order->table->update(['status' => 'free']);
+            }
         });
+    }
+
+    /**
+     * Crear un pedido de delivery sin mesa física.
+     * El pedido queda abierto; los ítems se agregan con addItem().
+     */
+    public function createDeliveryOrder(string $label): Order
+    {
+        return Order::create([
+            'table_id'       => null,
+            'user_id'        => auth()->id(),
+            'status'         => 'open',
+            'total'          => 0,
+            'is_delivery'    => true,
+            'delivery_label' => $label,
+            'opened_at'      => now(),
+        ]);
     }
 }

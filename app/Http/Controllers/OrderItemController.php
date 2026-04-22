@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\OrderUpdated as OrderUpdatedEvent;
 use App\Http\Requests\AddOrderItemRequest;
 use App\Http\Requests\UpdateOrderItemRequest;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Table;
@@ -34,6 +35,39 @@ class OrderItemController extends Controller
             'message'      => "'{$product->name}' agregado al pedido.",
             'order_id'     => $order->id,
             'is_new_order' => $isNewOrder,
+            'item'         => [
+                'id'         => $item->id,
+                'product'    => $product->name,
+                'category'   => $product->category ?? '',
+                'quantity'   => $item->quantity,
+                'unit_price' => $item->unit_price,
+                'subtotal'   => $item->quantity * $item->unit_price,
+                'notes'      => $item->notes,
+            ],
+        ]);
+    }
+
+    /**
+     * Agregar ítem a un pedido de delivery existente.
+     * El pedido ya existe (se crea al iniciar el delivery, no al primer ítem).
+     */
+    public function storeForDelivery(AddOrderItemRequest $request, Order $order)
+    {
+        if (! $order->is_delivery || ! $order->isOpen()) {
+            return response()->json(['success' => false, 'message' => 'Pedido de delivery inválido.'], 422);
+        }
+
+        $product = Product::findOrFail($request->product_id);
+        $item    = $this->orderService->addItem($order, $product, $request->quantity);
+
+        $order->load(['items.product']);
+        try { broadcast(new OrderUpdatedEvent($order, 'updated')); } catch (\Throwable) {}
+
+        return response()->json([
+            'success'      => true,
+            'message'      => "'{$product->name}' agregado al delivery.",
+            'order_id'     => $order->id,
+            'is_new_order' => false,
             'item'         => [
                 'id'         => $item->id,
                 'product'    => $product->name,

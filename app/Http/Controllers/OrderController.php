@@ -97,6 +97,9 @@ class OrderController extends Controller
         }
 
         $order->update(['kitchen_status' => 'entregado']);
+        $order->load(['table', 'items.product']);
+
+        try { broadcast(new OrderUpdatedEvent($order, 'entregado')); } catch (\Throwable) {}
 
         return response()->json(['success' => true]);
     }

@@ -25,6 +25,19 @@ class KitchenController extends Controller
     }
 
     /**
+     * API: IDs de pedidos activos en cocina (para polling de respaldo en el KDS).
+     */
+    public function activeOrderIds(): JsonResponse
+    {
+        $ids = Order::where('status', 'open')
+            ->whereNotIn('kitchen_status', ['entregado'])
+            ->whereHas('items.product', fn($q) => $q->where('type', 'Comida'))
+            ->pluck('id');
+
+        return response()->json($ids);
+    }
+
+    /**
      * Toggle kitchen_status del pedido completo.
      * pendiente/en_proceso → listo, listo → en_proceso
      */
@@ -62,7 +75,7 @@ class KitchenController extends Controller
         try {
             broadcast(new KitchenStatusUpdated(
                 itemId:      $item->id,
-                tableNumber: $order->table->number,
+                tableNumber: $order->table?->number,
                 orderId:     $order->id,
                 status:      $status,
             ));

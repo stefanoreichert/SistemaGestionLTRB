@@ -8,13 +8,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    protected $fillable = ['table_id', 'user_id', 'total', 'status', 'kitchen_status', 'opened_at', 'closed_at'];
+    protected $fillable = ['table_id', 'user_id', 'total', 'status', 'kitchen_status', 'opened_at', 'closed_at', 'is_delivery', 'delivery_label'];
 
     protected $casts = [
-        'total'     => 'decimal:2',
-        'opened_at' => 'datetime',
-        'closed_at' => 'datetime',
+        'total'       => 'decimal:2',
+        'opened_at'   => 'datetime',
+        'closed_at'   => 'datetime',
+        'is_delivery' => 'boolean',
     ];
+
+    public function isDelivery(): bool
+    {
+        return (bool) $this->is_delivery;
+    }
 
     public function isKitchenReady(): bool
     {

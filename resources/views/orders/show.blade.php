@@ -11,8 +11,13 @@
                     &#8592; Mesas
                 </a>
                 <div>
-                    <div style="font-size:1.2rem;font-weight:800;color:#fbbf24;line-height:1.1;">
-                        Mesa {{ $table->number }}
+                    <div style="font-size:1.2rem;font-weight:800;line-height:1.1;
+                                   {{ ($isDelivery ?? false) ? 'color:#a78bfa;' : 'color:#fbbf24;' }}">
+                        @if($isDelivery ?? false)
+                            🛵 {{ $deliveryLabel }}
+                        @else
+                            Mesa {{ $table->number }}
+                        @endif
                     </div>
                     <div id="header-order-info"
                          data-opened-at="{{ $order?->opened_at?->format('H:i') }}"
@@ -182,8 +187,12 @@
 
         {{-- PEDIDO --}}
         <div class="panel p-order">
-            <div class="panel-hdr" style="color:#fbbf24;">
-                Pedido - Mesa {{ $table->number }}
+            <div class="panel-hdr" style="color:{{ ($isDelivery ?? false) ? '#a78bfa' : '#fbbf24' }};">
+                @if($isDelivery ?? false)
+                    Pedido - 🛵 {{ $deliveryLabel }}
+                @else
+                    Pedido - Mesa {{ $table->number }}
+                @endif
             </div>
 
             <div class="items-scroll">
@@ -261,9 +270,11 @@
     </div>
 
     <script>
-        const CSRF    = document.querySelector('meta[name="csrf-token"]').content;
-        const mesaNum = {{ $table->number }};
-        let orderId   = @json($order?->id);
+        const CSRF        = document.querySelector('meta[name="csrf-token"]').content;
+        const mesaNum     = @json($table?->number);
+        const isDelivery  = @json($isDelivery ?? false);
+        const ADD_ITEM_URL = @json($addItemUrl ?? ('/tables/' . ($table?->number ?? '') . '/items'));
+        let orderId        = @json($order?->id);
 
         let productos            = [];
         let productoSeleccionado = null;
@@ -430,7 +441,7 @@
             // Enviar al servidor
             let resp;
             try {
-                const r = await fetch('/tables/' + mesaNum + '/items', {
+                const r = await fetch(ADD_ITEM_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
                     body: JSON.stringify({ product_id: productId, quantity: qty })
@@ -654,9 +665,18 @@
             if (!orderId) return;
             const btn = document.getElementById('btn-entregar-header');
             if (btn) { btn.disabled = true; btn.textContent = '…'; }
-            const resp = await apiRequest('/orders/' + orderId + '/deliver', 'PATCH', {});
+            const url = isDelivery
+                ? '/deliveries/' + orderId + '/deliver'
+                : '/orders/'     + orderId + '/deliver';
+            const resp = await apiRequest(url, 'PATCH', {});
             if (resp.success) {
-                if (btn) btn.remove();
+                if (btn) {
+                    btn.textContent = '✓ Entregado';
+                    btn.style.background    = 'rgba(16,185,129,.22)';
+                    btn.style.color         = '#34d399';
+                    btn.style.borderColor   = 'rgba(16,185,129,.5)';
+                    setTimeout(() => btn.remove(), 1800);
+                }
             } else {
                 if (btn) { btn.disabled = false; btn.textContent = '✓ Pedido entregado'; }
             }
