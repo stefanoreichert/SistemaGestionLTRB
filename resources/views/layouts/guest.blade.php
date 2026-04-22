@@ -75,17 +75,10 @@
             <div style="width:60px;height:2px;background:linear-gradient(90deg,transparent,#d97706,transparent);margin:0 auto 2rem;"></div>
 
             <p style="color:#4b5563;font-size:.85rem;line-height:1.75;margin:0 0 2.25rem;">
-                Sistema de Gestión POS<br>para mozos y administradores.
+                Sistema de Gestión POS
             </p>
 
-            <div style="display:flex;flex-direction:column;gap:.55rem;text-align:center;margin-top:.25rem;">
-                <p style="font-size:.72rem;color:#374151;letter-spacing:.18em;text-transform:uppercase;margin:0;line-height:2.2;">
-                    Mesas &nbsp;&middot;&nbsp; Pedidos &nbsp;&middot;&nbsp; Cocina &nbsp;&middot;&nbsp; Reportes
-                </p>
-                <p style="font-size:.73rem;color:#374151;font-style:italic;margin:0;letter-spacing:.04em;line-height:1.6;">
-                    Operaciones eficientes, servicio excepcional.
-                </p>
-            </div>
+
         </div>
 
         <div style="position:absolute;bottom:1.5rem;font-size:.68rem;color:#1f2937;letter-spacing:.08em;">
