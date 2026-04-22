@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Table;
+use App\Services\TableService;
 use Illuminate\Http\JsonResponse;
 
 class TableController extends Controller
 {
+    public function __construct(protected TableService $tableService) {}
+
     /**
-     * Menú principal: grilla de 40 mesas con estado libre/ocupada.
+     * Menú principal: grilla de mesas con estado libre/ocupada.
      */
     public function index()
     {
-        $tables   = Table::with('activeOrder')->orderBy('number')->get();
+        $tables   = $this->tableService->getAllWithActiveOrder();
         $occupied = $tables->where('status', 'occupied')->count();
         $free     = $tables->where('status', 'free')->count();
 
@@ -24,16 +26,6 @@ class TableController extends Controller
      */
     public function statuses(): JsonResponse
     {
-        $tables = Table::with('activeOrder')->get();
-
-        return response()->json(
-            $tables->map(fn($table) => [
-                'number'         => $table->number,
-                'table_status'   => $table->status,
-                'order_id'       => $table->activeOrder?->id,
-                'kitchen_status' => $table->activeOrder?->kitchen_status ?? 'pendiente',
-                'has_order'      => $table->activeOrder !== null,
-            ])
-        );
+        return response()->json($this->tableService->getStatuses());
     }
 }

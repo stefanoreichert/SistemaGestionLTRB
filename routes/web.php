@@ -56,7 +56,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('admin/users', AdminUserController::class)->names('admin.users');
     });
 
-    Route::get('/tickets/{order}', [TicketController::class, 'show'])->name('tickets.show');
+    // Tickets térmicos
+    Route::get('/tickets/{order}',        [TicketController::class, 'show'])  ->name('tickets.show');
+    Route::get('/tickets/{order}/raw',    [TicketController::class, 'raw'])   ->name('tickets.raw');
+    Route::get('/tickets/{order}/escpos', [TicketController::class, 'escpos'])->name('tickets.escpos');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

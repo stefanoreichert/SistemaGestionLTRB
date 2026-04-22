@@ -28,14 +28,18 @@ class OrderItemController extends Controller
         try { broadcast(new OrderUpdatedEvent($order->fresh(['table', 'items.product']), 'updated')); } catch (\Throwable) {}
 
         return response()->json([
-            'success' => true,
-            'message' => "'{$product->name}' agregado al pedido.",
-            'item'    => [
+            'success'  => true,
+            'message'  => "'{$product->name}' agregado al pedido.",
+            'order_id' => $order->id,
+            'item'     => [
                 'id'         => $item->id,
                 'product'    => $product->name,
+                'category'   => $product->category ?? '',
                 'quantity'   => $item->quantity,
                 'unit_price' => $item->unit_price,
-                'subtotal'   => $item->quantity * $item->unit_price,                'notes'      => $item->notes,            ],
+                'subtotal'   => $item->quantity * $item->unit_price,
+                'notes'      => $item->notes,
+            ],
         ]);
     }
 

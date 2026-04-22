@@ -218,6 +218,11 @@ const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 const STATUS_CYCLE = { new:'preparing', preparing:'ready', ready:'new' };
 const STATUS_LABEL = { new:'NUEVO', preparing:'PREP.', ready:'LISTO' };
 
+/* ── Solo ítems de comida (filtro WebSocket) ─────── */
+function soloComida(items) {
+    return (items || []).filter(i => i.type === 'Comida');
+}
+
 /* ── Ciclar estado ítem (NUEVO → PREP. → LISTO) ─── */
 function cycleStatus(itemId, orderId, tableNum) {
     const btn = document.getElementById('btn-' + itemId);
@@ -299,15 +304,18 @@ function escapeHtml(str) {
 
 /* ── Render tarjeta nueva (WebSocket) ────────────── */
 function renderCard(data) {
+    const comidaItems = soloComida(data.items);
+    if (!comidaItems.length) return null; // No mostrar tarjeta sin ítems de comida
+
     const mins = data.opened_at
         ? Math.floor((Date.now() - new Date(data.opened_at).getTime()) / 60000) : 0;
     const tC = mins >= 30 ? 'time-urgent' : (mins >= 15 ? 'time-warning' : 'time-ok');
     const cC = mins >= 30 ? 'urgent'      : (mins >= 15 ? 'warning'      : '');
-    const items = (data.items || []).map(i => `
+    const items = comidaItems.map(i => `
         <div class="item-row" id="item-row-${i.id}">
             <span class="item-qty">${i.quantity}×</span>
             <div class="item-info">
-                <span class="item-name">${i.name}</span>
+                <span class="item-name">${escapeHtml(i.name)}</span>
                 ${i.notes ? `<span class="item-note">⚠ ${escapeHtml(i.notes)}</span>` : ''}
             </div>
             <button class="item-status-btn s-new" id="btn-${i.id}" data-status="new"
@@ -325,7 +333,7 @@ function renderCard(data) {
         </div>
         <div class="card-items" id="items-${data.order_id}">${items}</div>
         <div class="card-footer">
-            <span id="footer-count-${data.order_id}">${(data.items||[]).length} ítem(s) &nbsp;·&nbsp; ${openedTime}</span>
+            <span id="footer-count-${data.order_id}">${comidaItems.length} ítem(s) &nbsp;·&nbsp; ${openedTime}</span>
             <button class="btn-order-status btn-en-proceso" id="ks-btn-${data.order_id}"
                     onclick="toggleOrderStatus(${data.order_id}, this)">Marcar como listo</button>
         </div>
@@ -337,18 +345,21 @@ function syncItems(data) {
     const container = document.getElementById('items-' + data.order_id);
     if (!container) return;
 
+    // Solo ítems de comida en el KDS
+    const comidaItems = soloComida(data.items);
+
     const existing = new Set([...container.querySelectorAll('[id^="item-row-"]')]
         .map(el => parseInt(el.id.replace('item-row-', ''))));
-    const incoming = new Set((data.items || []).map(i => i.id));
+    const incoming = new Set(comidaItems.map(i => i.id));
 
-    // Agregar nuevos
-    (data.items || []).forEach(i => {
+    // Agregar nuevos ítems de comida
+    comidaItems.forEach(i => {
         if (!existing.has(i.id)) {
             container.insertAdjacentHTML('beforeend', `
                 <div class="item-row" id="item-row-${i.id}">
                     <span class="item-qty">${i.quantity}×</span>
                     <div class="item-info">
-                        <span class="item-name">${i.name}</span>
+                        <span class="item-name">${escapeHtml(i.name)}</span>
                         ${i.notes ? `<span class="item-note">⚠ ${escapeHtml(i.notes)}</span>` : ''}
                     </div>
                     <button class="item-status-btn s-new" id="btn-${i.id}" data-status="new"
@@ -356,14 +367,14 @@ function syncItems(data) {
                 </div>`);
         }
     });
-    // Eliminar removidos
+    // Eliminar ítems removidos
     existing.forEach(id => { if (!incoming.has(id)) document.getElementById('item-row-' + id)?.remove(); });
 
     const fc = document.getElementById('footer-count-' + data.order_id);
     if (fc) {
         const openedTime = data.opened_at
             ? new Date(data.opened_at).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' }) : '—';
-        fc.innerHTML = `${(data.items||[]).length} ítem(s) &nbsp;·&nbsp; ${openedTime}`;
+        fc.innerHTML = `${comidaItems.length} ítem(s) &nbsp;·&nbsp; ${openedTime}`;
     }
 }
 
@@ -398,6 +409,56 @@ setInterval(() => {
         card.classList.toggle('warning', mins >= 15 && mins < 30);
     });
 }, 30000);
+
+/* ── WebSocket Echo ──────────────────────────────── */
+function initEcho() {
+    if (typeof window.Echo === 'undefined') { setTimeout(initEcho, 500); return; }
+    const badge = document.getElementById('ws-badge');
+    window.Echo.connector.pusher.connection.bind('connected',    () => {
+        badge.textContent = '⚡ En vivo';
+        badge.className   = 'kds-badge badge-ws-on';
+    });
+    window.Echo.connector.pusher.connection.bind('disconnected', () => {
+        badge.textContent = '✕ Sin conexión';
+        badge.className   = 'kds-badge badge-ws-off';
+    });
+
+    window.Echo.channel('restaurant')
+        .listen('.order.updated', (data) => {
+            document.getElementById('kds-empty-msg')?.remove();
+
+            if (data.action === 'closed' || data.action === 'cancelled') {
+                document.getElementById('card-order-' + data.order_id)?.remove();
+                updateMesasCount();
+                return;
+            }
+
+            // Solo procesar si hay ítems de comida
+            const comidaItems = soloComida(data.items);
+
+            if (document.getElementById('card-order-' + data.order_id)) {
+                syncItems(data);
+                // Si después de sync no quedan ítems de comida, quitar la tarjeta
+                const container = document.getElementById('items-' + data.order_id);
+                if (container && container.querySelectorAll('[id^="item-row-"]').length === 0) {
+                    document.getElementById('card-order-' + data.order_id)?.remove();
+                    updateMesasCount();
+                }
+            } else if (comidaItems.length > 0) {
+                const cardHtml = renderCard(data);
+                if (cardHtml) {
+                    document.getElementById('kds-grid').insertAdjacentHTML('beforeend', cardHtml);
+                    updateMesasCount();
+                }
+            }
+        })
+        .listen('.kitchen.status', (data) => {
+            applyItemStatus(data.item_id, data.status);
+        });
+}
+
+document.addEventListener('DOMContentLoaded', initEcho);
+</script>
 
 /* ── WebSocket Echo ──────────────────────────────── */
 function initEcho() {

@@ -30,6 +30,7 @@ class OrderUpdated implements ShouldBroadcastNow
             'items'       => $order->items->map(fn($i) => [
                 'id'         => $i->id,
                 'name'       => $i->product->name,
+                'type'       => $i->product->type ?? '',
                 'category'   => $i->product->category ?? '',
                 'quantity'   => $i->quantity,
                 'unit_price' => $i->unit_price,

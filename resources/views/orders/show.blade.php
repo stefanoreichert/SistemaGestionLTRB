@@ -188,8 +188,7 @@
             </div>
 
             <div class="items-scroll">
-                @if($order && $order->items->count() > 0)
-                <table style="width:100%;border-collapse:collapse;">
+                <table id="items-table" style="width:100%;border-collapse:collapse;{{ ($order && $order->items->count() > 0) ? '' : 'display:none' }}">
                     <thead>
                         <tr class="tbl-hdr">
                             <th style="text-align:left;padding-left:.875rem;">Producto</th>
@@ -200,6 +199,7 @@
                         </tr>
                     </thead>
                     <tbody id="tabla-items">
+                        @if($order)
                         @foreach($order->items as $item)
                         <tr id="row-{{ $item->id }}" class="item-row">
                             <td style="padding-left:.875rem;">
@@ -207,6 +207,7 @@
                                     {{ $item->product->name }}
                                     <span style="color:#4b5563;font-size:.68rem;margin-left:.25rem;">{{ $item->product->category ?? '' }}</span>
                                 </div>
+                                @if(($item->product->category ?? '') !== 'Bebida')
                                 <div style="margin-top:.3rem;display:flex;align-items:center;gap:.3rem;">
                                     <input type="text"
                                            id="note-{{ $item->id }}"
@@ -219,6 +220,7 @@
                                            onfocus="this.style.borderColor='#d97706';this.style.color='#e5e7eb';"
                                            onblur="this.style.borderColor='#2a2a2a';this.style.color='#9ca3af';guardarNota({{ $item->id }}, this.value);">
                                 </div>
+                                @endif
                             </td>
                             <td style="text-align:center;">
                                 <input type="number" value="{{ $item->quantity }}" min="1" max="99"
@@ -238,16 +240,15 @@
                             </td>
                         </tr>
                         @endforeach
+                        @endif
                     </tbody>
                 </table>
-                @else
-                <div class="empty-state">
+                <div id="empty-state" class="empty-state" style="{{ ($order && $order->items->count() > 0) ? 'display:none' : '' }}">
                     <div style="font-size:3rem;opacity:.08;">🧾</div>
                     <p style="color:#4b5563;font-style:italic;font-size:.82rem;">
                         {{ $order ? 'Pedido vacio. Selecciona un producto.' : 'Selecciona un producto para abrir el pedido.' }}
                     </p>
                 </div>
-                @endif
             </div>
 
             <div class="total-bar">
@@ -263,13 +264,22 @@
     <script>
         const CSRF    = document.querySelector('meta[name="csrf-token"]').content;
         const mesaNum = {{ $table->number }};
-        const orderId = @json($order?->id);
+        let orderId   = @json($order?->id);
 
         let productos            = [];
         let productoSeleccionado = null;
         let filtroTipo           = null;
         let filtroCategoria      = null;
 
+        /* ── Escape XSS ──────────────────────────────────── */
+        function escHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+                .replace(/'/g,'&#39;');
+        }
+
+        /* ── Catálogo de productos ───────────────────────── */
         async function cargarProductos() {
             try {
                 const r = await fetch('/api/products', {
@@ -370,11 +380,101 @@
             await enviarItem(id, parseInt(document.getElementById('cantidad').value) || 1);
         }
 
+        /* ── Agregar ítem: sin reload si el pedido ya existe ── */
         async function enviarItem(productId, qty) {
             const resp = await apiRequest('/tables/' + mesaNum + '/items', 'POST', { product_id: productId, quantity: qty });
-            if (resp.success) location.reload();
+            if (!resp.success) return;
+
+            // Primera vez que se crea el pedido → recargar para obtener
+            // los botones de cierre/cancelación en el header.
+            if (!orderId) {
+                location.reload();
+                return;
+            }
+
+            const item = resp.item;
+            const existingRow = document.getElementById('row-' + item.id);
+
+            if (existingRow) {
+                // Producto ya en pedido → actualizar cantidad y subtotal en DOM
+                const qtyInput = existingRow.querySelector('.qty-cell');
+                if (qtyInput) { qtyInput.value = item.quantity; qtyInput.defaultValue = item.quantity; }
+                const subEl = document.getElementById('subtotal-' + item.id);
+                if (subEl) { subEl.dataset.value = item.subtotal; subEl.textContent = '$' + fmt(item.subtotal); }
+            } else {
+                // Producto nuevo en el pedido → insertar fila en DOM
+                mostrarTabla();
+                appendItemRow(item);
+            }
+
+            recalcularTotal();
         }
 
+        /* ── Construir y agregar una fila al tbody ───────── */
+        function appendItemRow(item) {
+            const tbody = document.getElementById('tabla-items');
+            if (!tbody) return;
+
+            const noteHtml = item.category !== 'Bebida'
+                ? `<div style="margin-top:.3rem;display:flex;align-items:center;gap:.3rem;">
+                       <input type="text"
+                              id="note-${item.id}"
+                              value="${escHtml(item.notes || '')}"
+                              placeholder="Nota (ej: sin aderezos)…"
+                              maxlength="255"
+                              style="flex:1;background:#1a1a1a;border:1px solid #2a2a2a;color:#9ca3af;
+                                     border-radius:.35rem;padding:.25rem .5rem;font-size:.7rem;
+                                     font-style:italic;min-width:0;"
+                              onfocus="this.style.borderColor='#d97706';this.style.color='#e5e7eb';"
+                              onblur="this.style.borderColor='#2a2a2a';this.style.color='#9ca3af';guardarNota(${item.id}, this.value);">
+                   </div>`
+                : '';
+
+            const tr = document.createElement('tr');
+            tr.id        = 'row-' + item.id;
+            tr.className = 'item-row';
+            tr.innerHTML = `
+                <td style="padding-left:.875rem;">
+                    <div style="color:#e5e7eb;font-weight:500;font-size:.82rem;">
+                        ${escHtml(item.product)}
+                        <span style="color:#4b5563;font-size:.68rem;margin-left:.25rem;">${escHtml(item.category)}</span>
+                    </div>
+                    ${noteHtml}
+                </td>
+                <td style="text-align:center;">
+                    <input type="number" value="${item.quantity}" min="1" max="99" class="qty-cell"
+                           onchange="actualizarCantidad(${item.id}, this.value, this)">
+                </td>
+                <td style="text-align:right;color:#6b7280;">
+                    $${fmt(item.unit_price)}
+                </td>
+                <td style="text-align:right;padding-right:.875rem;color:#4ade80;font-weight:700;"
+                    id="subtotal-${item.id}"
+                    data-value="${item.subtotal}">
+                    $${fmt(item.subtotal)}
+                </td>
+                <td style="text-align:center;">
+                    <button onclick="eliminarItem(${item.id})" class="del-btn" title="Eliminar">&times;</button>
+                </td>`;
+            tbody.appendChild(tr);
+        }
+
+        /* ── Mostrar tabla / ocultar empty-state ─────────── */
+        function mostrarTabla() {
+            const t = document.getElementById('items-table');
+            const e = document.getElementById('empty-state');
+            if (t) t.style.display = '';
+            if (e) e.style.display = 'none';
+        }
+
+        function mostrarVacio() {
+            const t = document.getElementById('items-table');
+            const e = document.getElementById('empty-state');
+            if (t) t.style.display = 'none';
+            if (e) { e.style.display = ''; e.style.flexDirection = 'column'; }
+        }
+
+        /* ── Actualizar cantidad de ítem ─────────────────── */
         async function actualizarCantidad(itemId, qty, inp) {
             const q = parseInt(qty);
             if (isNaN(q) || q < 1) { inp.value = inp.defaultValue; return; }
@@ -394,25 +494,39 @@
             document.getElementById('total-display').textContent = '$' + fmt(t);
         }
 
+        /* ── Eliminar ítem: sin reload salvo último ítem ─── */
         async function eliminarItem(id) {
-            if (!confirm('Eliminar este item?')) return;
+            if (!confirm('¿Eliminar este item?')) return;
             const resp = await apiRequest('/order-items/' + id, 'DELETE', {});
-            if (resp.success) location.reload();
+            if (!resp.success) return;
+
+            document.getElementById('row-' + id)?.remove();
+
+            const tbody = document.getElementById('tabla-items');
+            if (!tbody || tbody.querySelectorAll('tr').length === 0) {
+                // Último ítem eliminado → la mesa queda libre; recargar para
+                // limpiar el header (botones de cierre) y reflejar el nuevo estado.
+                location.reload();
+                return;
+            }
+
+            recalcularTotal();
         }
 
+        /* ── Acciones del header ─────────────────────────── */
         function cerrarMesa() {
             if (!orderId) { alert('No hay pedido abierto.'); return; }
-            if (confirm('Cerrar la mesa e imprimir el ticket?')) document.getElementById('form-close').submit();
+            if (confirm('¿Cerrar la mesa e imprimir el ticket?')) document.getElementById('form-close').submit();
         }
 
         function cerrarMesaSinImprimir() {
             if (!orderId) { alert('No hay pedido abierto.'); return; }
-            if (confirm('Cerrar la mesa?')) document.getElementById('form-close').submit();
+            if (confirm('¿Cerrar la mesa?')) document.getElementById('form-close').submit();
         }
 
         function borrarPedido() {
             if (!orderId) { alert('No hay pedido activo.'); return; }
-            if (confirm('Borrar el pedido completo? No se descontara stock.')) document.getElementById('form-cancel').submit();
+            if (confirm('¿Borrar el pedido completo? No se descontará stock.')) document.getElementById('form-cancel').submit();
         }
 
         async function marcarEntregado() {
@@ -431,10 +545,7 @@
             await apiRequest('/order-items/' + itemId + '/note', 'PATCH', { notes: nota });
         }
 
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Enter' && document.activeElement.id !== 'cantidad') agregarProducto();
-        });
-
+        /* ── API helper ──────────────────────────────────── */
         async function apiRequest(url, method, data) {
             try {
                 const r = await fetch(url, {
@@ -449,6 +560,27 @@
         }
 
         function fmt(n) { return parseFloat(n).toLocaleString('es-AR'); }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && document.activeElement.id !== 'cantidad') {
+                agregarProducto();
+                return;
+            }
+
+            // Si el foco NO está en ningún input/textarea/select,
+            // redirigir la escritura al campo de búsqueda automáticamente.
+            const tag = document.activeElement?.tagName?.toLowerCase();
+            const enInput = tag === 'input' || tag === 'textarea' || tag === 'select'
+                || document.activeElement?.isContentEditable;
+
+            if (!enInput && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                const busq = document.getElementById('busqueda');
+                busq.focus();
+                busq.value += e.key;           // insertar el carácter ya pulsado
+                busq.dispatchEvent(new Event('input')); // disparar el filtro
+                e.preventDefault();            // evitar doble escritura
+            }
+        });
 
         cargarProductos();
     </script>

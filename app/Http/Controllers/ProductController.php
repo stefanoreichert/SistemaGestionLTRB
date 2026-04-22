@@ -2,21 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
+use App\Services\ProductService;
 
 class ProductController extends Controller
 {
+    public function __construct(protected ProductService $productService) {}
+
     /**
      * Devuelve todos los productos activos como JSON.
      * Usado por el panel izquierdo de la ventana de pedido (AJAX).
      */
     public function index()
     {
-        $products = Product::active()
-            ->orderBy('type')
-            ->orderBy('name')
-            ->get(['id', 'name', 'type', 'category', 'price', 'stock']);
-
-        return response()->json($products);
+        return response()->json($this->productService->getActiveProducts());
     }
 }
