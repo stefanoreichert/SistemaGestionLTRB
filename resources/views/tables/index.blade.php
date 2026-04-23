@@ -1,4 +1,4 @@
-<x-app-layout>
+﻿<x-app-layout>
     <x-slot name="header">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
 
@@ -98,7 +98,7 @@
             position: absolute; top: 0.45rem; right: 0.5rem;
             width: 7px; height: 7px; border-radius: 50%;
         }
-        /* Botón entregar dentro de la tarjeta */
+        /* BotÃ³n entregar dentro de la tarjeta */
         .btn-entregar {
             display: block; width: calc(100% + 0px);
             margin-top: 0.45rem; padding: 0.3rem 0.4rem;
@@ -111,7 +111,7 @@
         .btn-entregar:hover { background: rgba(234,179,8,.38); }
         .btn-entregar-hidden { display: none !important; }
 
-        /* ── Delivery cards ──────────────────────────────── */
+        /* â”€â”€ Delivery cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         .delivery-card {
             border-radius:.875rem; border:2px solid rgba(139,92,246,.45);
             padding:.875rem .75rem; background:rgba(60,20,120,.28);
@@ -173,7 +173,7 @@
                     data-order-id="{{ $orderId ?? '' }}"
                     onclick="abrirMesa({{ $table->number }})"
                     ondblclick="verResumen({{ $table->number }}, event)"
-                    title="Mesa {{ $table->number }} — {{ $libre ? 'Libre' : ($isLista ? 'Listo' : 'Ocupada') }}">
+                    title="Mesa {{ $table->number }} â€” {{ $libre ? 'Libre' : ($isLista ? 'Listo' : 'Ocupada') }}">
 
                     <span id="mesa-dot-{{ $table->number }}"
                           class="mesa-dot"
@@ -193,26 +193,9 @@
         </div>
 
         <p style="text-align:center; font-size:0.7rem; color:#374151; margin-top:1.5rem;">
-            Click = abrir mesa &nbsp;&bull;&nbsp; Doble click = resumen rápido
+            Click = abrir mesa &nbsp;&bull;&nbsp; Doble click = resumen rÃ¡pido
         </p>
 
-        {{-- Sección Deliveries --}}
-        <div id="deliveries-section" style="margin-top:1.75rem;">
-            <h2 style="font-size:.78rem; font-weight:700; color:#a78bfa; text-transform:uppercase;
-                       letter-spacing:.1em; margin-bottom:.75rem;">
-                🛵 Deliveries activos
-                <span id="delivery-count" style="margin-left:.5rem; font-size:.7rem;
-                      background:rgba(139,92,246,.25); color:#c4b5fd; padding:.1rem .5rem;
-                      border-radius:1rem;">0</span>
-            </h2>
-            <div id="deliveries-list"
-                 style="display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:.6rem;">
-                <p id="deliveries-empty"
-                   style="color:#6b7280; font-style:italic; font-size:.8rem; grid-column:1/-1;">
-                    Sin deliveries activos.
-                </p>
-            </div>
-        </div>
     </div>
 
     <style>
@@ -223,7 +206,7 @@
         @media (min-width:1200px) { .mesas-grid { grid-template-columns: repeat(8,1fr)!important;  gap:1.5rem!important; } }
         @media (min-width:1440px) { .mesas-grid { grid-template-columns: repeat(9,1fr)!important;  gap:1.5rem!important; } }
         @media (min-width:1700px) { .mesas-grid { grid-template-columns: repeat(10,1fr)!important; gap:1.5rem!important; } }
-        /* En móvil las mesas son más grandes y táctiles */
+        /* En mÃ³vil las mesas son mÃ¡s grandes y tÃ¡ctiles */
         @media (max-width:479px) {
             .mesa-num    { font-size: 2rem !important; }
             .mesa-estado { font-size: .65rem !important; }
@@ -231,7 +214,7 @@
         }
     </style>
 
-    {{-- Modal resumen rápido --}}
+    {{-- Modal resumen rÃ¡pido --}}
     <div id="modal-resumen"
          style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75);
                 z-index:100; align-items:center; justify-content:center; padding:1rem;"
@@ -271,342 +254,14 @@
         </div>
     </div>
 
+    {{-- Inicializar TablesPage (logica en resources/js/tables.js, cargado via app.js) --}}
     <script>
-        const CSRF = document.querySelector('meta[name="csrf-token"]').content;
-
-        /* ── Navegación ─────────────────────────────────────── */
-        function abrirMesa(numero) {
-            window.location.href = `/tables/${numero}/order`;
-        }
-
-        /* ── Helpers de estado ──────────────────────────────── */
-        function setMesaLibre(num) {
-            const btn    = document.getElementById('mesa-btn-' + num);
-            const dot    = document.getElementById('mesa-dot-' + num);
-            const label  = document.getElementById('mesa-estado-' + num);
-            const btnEnt = document.getElementById('btn-entregar-' + num);
-            if (!btn) return;
-            btn.className        = 'mesa-btn mesa-libre';
-            btn.title            = `Mesa ${num} — Libre`;
-            btn.dataset.kitchenStatus = 'pendiente';
-            dot.style.background = '#10b981';
-            dot.style.animation  = 'pulse 2s infinite';
-            label.textContent    = 'libre';
-            if (btnEnt) btnEnt.classList.add('btn-entregar-hidden');
-            recalcContadores();
-        }
-
-        function setMesaOcupada(num) {
-            const btn    = document.getElementById('mesa-btn-' + num);
-            const dot    = document.getElementById('mesa-dot-' + num);
-            const label  = document.getElementById('mesa-estado-' + num);
-            const btnEnt = document.getElementById('btn-entregar-' + num);
-            if (!btn) return;
-            btn.className        = 'mesa-btn mesa-ocupada';
-            btn.title            = `Mesa ${num} — Ocupada`;
-            btn.dataset.kitchenStatus = 'pendiente';
-            dot.style.background = '#ef4444';
-            dot.style.animation  = '';
-            label.textContent    = 'ocupada';
-            if (btnEnt) btnEnt.classList.add('btn-entregar-hidden');
-            recalcContadores();
-        }
-
-        function setMesaLista(num) {
-            const btn    = document.getElementById('mesa-btn-' + num);
-            const dot    = document.getElementById('mesa-dot-' + num);
-            const label  = document.getElementById('mesa-estado-' + num);
-            const btnEnt = document.getElementById('btn-entregar-' + num);
-            if (!btn) return;
-            btn.className        = 'mesa-btn mesa-lista';
-            btn.title            = `Mesa ${num} — Listo para entregar`;
-            btn.dataset.kitchenStatus = 'listo';
-            dot.style.background = '#eab308';
-            dot.style.animation  = '';
-            label.textContent    = 'listo';
-            if (btnEnt) btnEnt.classList.remove('btn-entregar-hidden');
-            recalcContadores();
-        }
-
-        function recalcContadores() {
-            const total    = document.querySelectorAll('.mesa-btn').length;
-            const occupied = document.querySelectorAll('.mesa-ocupada, .mesa-lista').length;
-            const free     = total - occupied;
-            document.getElementById('lbl-free').textContent     = `${free} libres`;
-            document.getElementById('lbl-occupied').textContent = `${occupied} ocupadas`;
-        }
-
-        /* ── Entregar pedido ────────────────────────────────── */
-        function entregarPedido(num, btn) {
-            const card    = document.getElementById('mesa-btn-' + num);
-            const orderId = card?.dataset.orderId;
-            if (!orderId) return;
-
-            btn.disabled    = true;
-            btn.textContent = '…';
-
-            fetch(`/orders/${orderId}/deliver`, {
-                method:  'PATCH',
-                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    // Vuelve a rojo: pedido entregado, sigue abierto hasta cobrar
-                    setMesaOcupada(num);
-                } else {
-                    btn.disabled    = false;
-                    btn.textContent = 'Pedido entregado';
-                }
-            })
-            .catch(() => {
-                btn.disabled    = false;
-                btn.textContent = 'Pedido entregado';
-            });
-        }
-
-        /* ── Polling de kitchen_status (cada 5 s) ───────────── */
-        function pollKitchenStatus() {
-            fetch('/api/tables/statuses', {
-                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
-            })
-            .then(r => r.json())
-            .then(rows => {
-                rows.forEach(row => {
-                    const num  = row.number;
-                    const card = document.getElementById('mesa-btn-' + num);
-                    if (!card) return;
-
-                    // Actualizar order_id en data attribute
-                    if (row.order_id) card.dataset.orderId = row.order_id;
-
-                    const current = card.dataset.kitchenStatus ?? 'pendiente';
-                    const next    = row.kitchen_status;
-
-                    if (!row.has_order) {
-                        if (!card.classList.contains('mesa-libre')) setMesaLibre(num);
-                        return;
-                    }
-                    if (next === 'listo' && current !== 'listo') { setMesaLista(num); return; }
-                    if (next !== 'listo' && current === 'listo') { setMesaOcupada(num); return; }
-                });
-            })
-            .catch(() => {/* silencioso */});
-        }
-
-        /* ── Modal de resumen ───────────────────────────────── */
-        function verResumen(numero, e) {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('modal-titulo').textContent = `Mesa ${numero}`;
-            document.getElementById('modal-contenido').innerHTML = '<p style="color:#6b7280;">Cargando...</p>';
-            document.getElementById('modal-btn-abrir').onclick = () => abrirMesa(numero);
-            document.getElementById('modal-resumen').style.display = 'flex';
-
-            fetch(`/api/tables/${numero}/summary`, {
-                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (!data.success) {
-                    document.getElementById('modal-contenido').innerHTML =
-                        `<p style="color:#6b7280; font-style:italic;">${data.message}</p>`;
-                    return;
-                }
-                let html = `<table style="width:100%; border-collapse:collapse; margin-bottom:0.75rem;">
-                    <thead><tr style="border-bottom:1px solid #333;">
-                        <th style="text-align:left; padding-bottom:0.5rem; color:#6b7280; font-weight:500; font-size:0.75rem;">Producto</th>
-                        <th style="text-align:center; padding-bottom:0.5rem; color:#6b7280; font-weight:500; font-size:0.75rem;">Cant.</th>
-                        <th style="text-align:right; padding-bottom:0.5rem; color:#6b7280; font-weight:500; font-size:0.75rem;">Subtotal</th>
-                    </tr></thead><tbody>`;
-                data.items.forEach(item => {
-                    html += `<tr style="border-bottom:1px solid #1f1f1f;">
-                        <td style="padding:0.4rem 0; color:#e5e7eb;">${item.name}</td>
-                        <td style="padding:0.4rem 0; text-align:center; color:#9ca3af;">${item.quantity}</td>
-                        <td style="padding:0.4rem 0; text-align:right; color:#4ade80;">$${fmt(item.subtotal)}</td>
-                    </tr>`;
-                });
-                html += `</tbody></table>
-                    <div style="text-align:right; font-weight:800; color:#fbbf24; font-size:1rem;">
-                        Total: $${fmt(data.total)}
-                    </div>`;
-                document.getElementById('modal-contenido').innerHTML = html;
-            })
-            .catch(() => {
-                document.getElementById('modal-contenido').innerHTML =
-                    '<p style="color:#f87171;">Error al cargar el resumen.</p>';
-            });
-        }
-
-        function cerrarModal() {
-            document.getElementById('modal-resumen').style.display = 'none';
-        }
-
-        function fmt(n) { return parseFloat(n).toLocaleString('es-AR'); }
-
-        /* ── Delivery: lista ────────────────────────────────── */
-        function escapeHtmlDel(str) {
-            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
-                .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-        }
-
-        function abrirDelivery(orderId) {
-            window.location.href = '/delivery/' + orderId;
-        }
-
-        async function entregarDelivery(orderId, btn) {
-            btn.disabled    = true;
-            btn.textContent = '…';
-            try {
-                const r = await fetch('/delivery/' + orderId + '/deliver', {
-                    method: 'PATCH',
-                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
-                });
-                const data = await r.json();
-                if (data.success) {
-                    document.getElementById('del-card-' + orderId)?.remove();
-                    updateDeliveryCount();
-                } else {
-                    btn.disabled    = false;
-                    btn.textContent = 'Entregar';
-                }
-            } catch {
-                btn.disabled    = false;
-                btn.textContent = 'Entregar';
+        (function () {
+            function _run() {
+                if (window.TablesPage) { window.TablesPage.init(); return; }
+                setTimeout(_run, 20);
             }
-        }
-
-        function renderDeliveryCard(d) {
-            const isListo = d.kitchen_status === 'listo';
-            const card = document.createElement('div');
-            card.id          = 'del-card-' + d.order_id;
-            card.className   = 'delivery-card';
-            card.title       = 'Abrir delivery: ' + escapeHtmlDel(d.delivery_label);
-            card.onclick     = () => abrirDelivery(d.order_id);
-            card.innerHTML   = `
-                <div class="delivery-label">\ud83d\udef5 ${escapeHtmlDel(d.delivery_label)}</div>
-                <div class="delivery-meta">${d.items_count} item${d.items_count !== 1 ? 's' : ''} &bull; ${d.opened_time || ''}</div>
-                <button id="del-ent-${d.order_id}"
-                        class="btn-del-entregar ${isListo ? '' : 'btn-del-entregar-hidden'}"
-                        onclick="event.stopPropagation(); entregarDelivery(${d.order_id}, this)">
-                    Entregar
-                </button>`;
-            return card;
-        }
-
-        function updateDeliveryCount() {
-            const count = document.querySelectorAll('.delivery-card').length;
-            document.getElementById('delivery-count').textContent = count;
-            document.getElementById('deliveries-empty').style.display = count ? 'none' : '';
-        }
-
-        function handleDeliveryUpdate(data) {
-            if (data.action === 'entregado' || data.action === 'closed' || data.action === 'cancelled') {
-                document.getElementById('del-card-' + data.order_id)?.remove();
-                updateDeliveryCount();
-                return;
-            }
-            // updated → actualizar o insertar tarjeta
-            const existing = document.getElementById('del-card-' + data.order_id);
-            const isListo  = data.kitchen_status === 'listo';
-            if (existing) {
-                const btnEnt = document.getElementById('del-ent-' + data.order_id);
-                if (btnEnt) {
-                    if (isListo) btnEnt.classList.remove('btn-del-entregar-hidden');
-                    else         btnEnt.classList.add('btn-del-entregar-hidden');
-                }
-            } else {
-                const newCard = renderDeliveryCard({
-                    order_id:       data.order_id,
-                    delivery_label: data.delivery_label,
-                    kitchen_status: data.kitchen_status ?? 'pendiente',
-                    items_count:    data.items_count ?? 0,
-                    opened_time:    data.opened_at ? new Date(data.opened_at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '',
-                });
-                const list = document.getElementById('deliveries-list');
-                if (list) list.appendChild(newCard);
-            }
-            updateDeliveryCount();
-        }
-
-        async function loadDeliveries() {
-            try {
-                const r    = await fetch('/api/delivery', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
-                const list = await r.json();
-                const container = document.getElementById('deliveries-list');
-                // Limpiar tarjetas existentes (conservar el párrafo vacío)
-                container.querySelectorAll('.delivery-card').forEach(c => c.remove());
-                list.forEach(d => container.appendChild(renderDeliveryCard(d)));
-                updateDeliveryCount();
-            } catch { /* silencioso */ }
-        }
-
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { cerrarModal(); } });
-
-        /* ── WebSocket: tiempo real ─────────────────────────── */
-        function initEcho() {
-            if (typeof window.Echo === 'undefined') {
-                setTimeout(initEcho, 500);
-                return;
-            }
-
-            const indicator = document.getElementById('ws-indicator');
-            const wsLabel   = document.getElementById('ws-label');
-
-            window.Echo.connector.pusher.connection.bind('connected', () => {
-                indicator.style.background = '#10b981';
-                wsLabel.textContent = 'En vivo';
-                wsLabel.style.color = '#34d399';
-            });
-            window.Echo.connector.pusher.connection.bind('disconnected', () => {
-                indicator.style.background = '#ef4444';
-                wsLabel.textContent = 'Desconectado';
-                wsLabel.style.color = '#f87171';
-            });
-            window.Echo.connector.pusher.connection.bind('connecting', () => {
-                indicator.style.background = '#d97706';
-                wsLabel.textContent = 'Conectando…';
-                wsLabel.style.color = '#fbbf24';
-            });
-
-            window.Echo.channel('restaurant')
-                .listen('.order.updated', (data) => {
-                    if (data.is_delivery) {
-                        handleDeliveryUpdate(data);
-                        return;
-                    }
-                    const tableNum = data.table_number;
-                    if (!tableNum) return;
-                    if (data.action === 'updated') {
-                        setMesaOcupada(tableNum);
-                    } else if (data.action === 'closed' || data.action === 'cancelled') {
-                        setMesaLibre(tableNum);
-                    }
-                });
-        }
-
-        function __tablesInit() {
-            initEcho();
-            // Guardar IDs de intervalos para poder limpiarlos en SPA
-            window._tablesIntervals = window._tablesIntervals || [];
-            window._tablesIntervals.push(setInterval(pollKitchenStatus, 5000));
-            loadDeliveries();
-            window._tablesIntervals.push(setInterval(loadDeliveries, 10000));
-
-            // Registrar limpieza para navegación SPA
-            if (typeof window.spaRegisterCleanup === 'function') {
-                window.spaRegisterCleanup(function () {
-                    (window._tablesIntervals || []).forEach(clearInterval);
-                    window._tablesIntervals = [];
-                    if (window.Echo) { try { window.Echo.leave('restaurant'); } catch (e) {} }
-                });
-            }
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', __tablesInit);
-        } else {
-            __tablesInit();
-        }
+            _run();
+        })();
     </script>
 </x-app-layout>
