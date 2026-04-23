@@ -40,20 +40,6 @@
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
         .mesa-btn {
             position: relative;
-            border-radius: 0.875rem;
-            border-width: 2px;
-            border-style: solid;
-            padding: 0.875rem 0.5rem;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
-            user-select: none;
-            background: none;
-            width: 100%;
-            display: block;
-        }
-        .mesa-btn {
-            position: relative;
             border-radius: 1rem;
             border-width: 2px;
             border-style: solid;
@@ -242,12 +228,6 @@
             .mesa-num    { font-size: 2rem !important; }
             .mesa-estado { font-size: .65rem !important; }
             .mesa-btn    { padding: 1.2rem .5rem !important; min-height: 70px; }
-        }
-        /* En móvil las mesas son más grandes y táctiles */
-        @media (max-width:479px) {
-            .mesa-num    { font-size: 2rem !important; }
-            .mesa-estado { font-size: .65rem !important; }
-            .mesa-btn    { padding: 1rem .5rem !important; min-height: 70px; }
         }
     </style>
 
