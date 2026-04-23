@@ -2,40 +2,35 @@ FROM php:8.2-fpm
 
 WORKDIR /var/www
 
-# Instalar dependencias del sistema + Node.js 20 LTS
+# Dependencias sistema + Node
 RUN apt-get update && apt-get install -y \
     git curl libpng-dev libonig-dev libxml2-dev zip unzip \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Instalar extensiones PHP
+# PHP extensiones
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Instalar Composer
+# Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copiar archivos del proyecto
+# Copiar proyecto
 COPY . .
 
-# Instalar dependencias PHP de producción
+# Laravel dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Instalar dependencias Node
-RUN npm install
-
-# Compilar assets Vite (output en public/build)
+# Node production build
+ENV NODE_ENV=production
+RUN npm ci
 RUN npm run build
 
-# Permisos correctos para Laravel
+# Permisos Laravel
 RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage \
-    && chmod -R 755 /var/www/bootstrap/cache
+    && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 10000
 
-# Cachear configuración para producción y arrancar servidor
-CMD php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache && \
-    php artisan serve --host=0.0.0.0 --port=$PORT
+# SOLO servidor (IMPORTANTE)
+CMD php artisan serve --host=0.0.0.0 --port=$PORT
