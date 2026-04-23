@@ -257,6 +257,8 @@
                 display: block;
                 padding: 0;
                 margin: 0;
+                min-height: 0 !important;
+                height: auto !important;
             }
 
             .action-bar { display: none !important; }

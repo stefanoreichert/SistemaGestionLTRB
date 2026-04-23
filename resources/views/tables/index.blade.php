@@ -151,7 +151,7 @@
         @endif
 
         {{-- Grilla de mesas --}}
-        <div id="mesas-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:0.6rem;"
+        <div id="mesas-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.6rem;"
              class="mesas-grid">
             @foreach($tables as $table)
                 @php
@@ -212,9 +212,16 @@
     </div>
 
     <style>
-        @media (min-width:480px)  { .mesas-grid { grid-template-columns: repeat(6,1fr)!important; } }
-        @media (min-width:640px)  { .mesas-grid { grid-template-columns: repeat(8,1fr)!important; } }
+        @media (min-width:480px)  { .mesas-grid { grid-template-columns: repeat(5,1fr)!important; } }
+        @media (min-width:640px)  { .mesas-grid { grid-template-columns: repeat(6,1fr)!important; } }
+        @media (min-width:768px)  { .mesas-grid { grid-template-columns: repeat(8,1fr)!important; } }
         @media (min-width:900px)  { .mesas-grid { grid-template-columns: repeat(10,1fr)!important; } }
+        /* En móvil las mesas son más grandes y táctiles */
+        @media (max-width:479px) {
+            .mesa-num  { font-size: 2rem !important; }
+            .mesa-estado { font-size: .65rem !important; }
+            .mesa-btn { padding: 1rem .5rem !important; min-height: 70px; }
+        }
     </style>
 
     {{-- Modal Nuevo Delivery --}}

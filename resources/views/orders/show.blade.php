@@ -1,17 +1,18 @@
 ﻿<x-app-layout>
     <x-slot name="header">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
 
-            <div style="display:flex;align-items:center;gap:.875rem;">
+            <div style="display:flex;align-items:center;gap:.6rem;min-width:0;">
                 <a href="{{ route('tables.index') }}"
-                   style="color:#6b7280;text-decoration:none;font-size:.78rem;padding:.35rem .7rem;
-                          border:1px solid #2a2a2a;border-radius:.5rem;transition:all .15s;"
+                   style="color:#6b7280;text-decoration:none;font-size:.78rem;padding:.45rem .7rem;
+                          border:1px solid #2a2a2a;border-radius:.5rem;transition:all .15s;
+                          white-space:nowrap;flex-shrink:0;"
                    onmouseover="this.style.color='#e5e7eb';this.style.borderColor='#555';"
                    onmouseout="this.style.color='#6b7280';this.style.borderColor='#2a2a2a';">
                     &#8592; Mesas
                 </a>
-                <div>
-                    <div style="font-size:1.2rem;font-weight:800;line-height:1.1;
+                <div style="min-width:0;">
+                    <div style="font-size:1.1rem;font-weight:800;line-height:1.1;
                                    {{ ($isDelivery ?? false) ? 'color:#a78bfa;' : 'color:#fbbf24;' }}">
                         @if($isDelivery ?? false)
                             🛵 {{ $deliveryLabel }}
@@ -32,35 +33,35 @@
                 </div>
             </div>
 
-            <div id="order-actions" style="{{ $order ? 'display:flex' : 'display:none' }};gap:.5rem;flex-wrap:wrap;align-items:center;">
+            <div id="order-actions" style="{{ $order ? 'display:flex' : 'display:none' }};gap:.4rem;flex-wrap:wrap;align-items:center;">
 
                 {{-- Botón "Entregado": visible solo cuando kitchen_status = listo --}}
                 <button id="btn-entregar-header"
                         onclick="marcarEntregado()"
-                        style="padding:.45rem .9rem;background:rgba(234,179,8,.18);color:#fef08a;
+                        style="padding:.5rem .9rem;background:rgba(234,179,8,.18);color:#fef08a;
                                border:1px solid rgba(234,179,8,.5);border-radius:.5rem;
-                               font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s;
+                               font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;
                                {{ ($order && $order->kitchen_status === 'listo') ? '' : 'display:none;' }}"
                         onmouseover="this.style.background='rgba(234,179,8,.32)';"
                         onmouseout="this.style.background='rgba(234,179,8,.18)';">
-                    ✓ Pedido entregado
+                    ✓ Entregado
                 </button>
 
                 @if(auth()->user()->isAdmin())
                 <button onclick="cerrarMesa()"
-                        style="padding:.55rem 1.1rem;background:#059669;color:#fff;border:none;
-                               border-radius:.6rem;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s;"
+                        style="padding:.5rem 1rem;background:#059669;color:#fff;border:none;
+                               border-radius:.6rem;font-size:.8rem;font-weight:700;cursor:pointer;transition:background .15s;"
                         onmouseover="this.style.background='#047857';"
                         onmouseout="this.style.background='#059669';">
-                    Cerrar e Imprimir
+                    ✔ Cerrar
                 </button>
                 @else
                 <button onclick="cerrarMesaSinImprimir()"
-                        style="padding:.55rem 1.1rem;background:#059669;color:#fff;border:none;
-                               border-radius:.6rem;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s;"
+                        style="padding:.5rem 1rem;background:#059669;color:#fff;border:none;
+                               border-radius:.6rem;font-size:.8rem;font-weight:700;cursor:pointer;transition:background .15s;"
                         onmouseover="this.style.background='#047857';"
                         onmouseout="this.style.background='#059669';">
-                    Cerrar Mesa
+                    ✔ Cerrar
                 </button>
                 @endif
 
@@ -69,9 +70,9 @@
                     @csrf @method('DELETE')
                 </form>
                 <button onclick="borrarPedido()"
-                        style="padding:.55rem 1.1rem;background:transparent;color:#f87171;
+                        style="padding:.5rem 1rem;background:transparent;color:#f87171;
                                border:1px solid rgba(239,68,68,.35);border-radius:.6rem;
-                               font-size:.82rem;font-weight:700;cursor:pointer;transition:all .15s;"
+                               font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;"
                         onmouseover="this.style.background='rgba(239,68,68,.1)';"
                         onmouseout="this.style.background='transparent';">
                     Cancelar Pedido
@@ -96,6 +97,22 @@
                      font-size:.7rem; font-weight:700; text-transform:uppercase;
                      letter-spacing:.07em; flex-shrink:0; }
         .p-catalog { width:38%; flex-shrink:0; }
+
+        /* ── Mobile POS tabs ─────────────────────────────────────── */
+        @media (max-width:767px) {
+            .pos-wrap {
+                flex-direction: column;
+                height: auto;
+                overflow: visible;
+                padding: .5rem;
+                gap: .5rem;
+            }
+            .p-catalog { width: 100% !important; height: 55vh; }
+            .p-order   { flex: none !important; height: 45vh; }
+            .pos-wrap .panel { overflow: hidden; }
+        }
+        /* ── End mobile ──────────────────────────────────────────── */
+
         .search-box { padding:.55rem .75rem; background:#111; border-bottom:1px solid #1e1e1e;
                       flex-shrink:0; }
         .search-inp { width:100%; box-sizing:border-box; background:#1e1e1e; border:1px solid #2a2a2a;
