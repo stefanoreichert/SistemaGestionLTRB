@@ -1,0 +1,35 @@
+# Dependencias (se instalan en el contenedor)
+node_modules/
+vendor/
+
+# Assets compilados (se generan en Stage 1)
+public/build/
+
+# Storage (logs, uploads, cache)
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+storage/app/public/
+
+# Archivos de entorno
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# IDE / OS
+.idea/
+.vscode/
+*.DS_Store
+
+# Tests
+tests/
+phpunit.xml
+
+# Docker
+Dockerfile
+.dockerignore
