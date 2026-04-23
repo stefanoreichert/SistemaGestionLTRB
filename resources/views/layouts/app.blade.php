@@ -25,7 +25,7 @@
             </header>
         @endisset
 
-        <main>
+        <main id="spa-content" style="transition:opacity 0.1s ease;">
             {{ $slot }}
         </main>
 
@@ -65,5 +65,130 @@
 
             </div>
         </footer>
+        <!-- SPA progress bar -->
+        <div id="_spa-bar" style="position:fixed;top:0;left:0;height:2px;width:0;z-index:9999;
+             background:linear-gradient(90deg,#6366f1,#8b5cf6);opacity:0;pointer-events:none;
+             transition:width .4s ease,opacity .25s ease;"></div>
+
     </body>
+
+    <script>
+    /* ── SPA Navigation (Mesas ↔ Delivery) ─────────────────────────────── */
+    (function () {
+        'use strict';
+
+        /* Cleanup registry: cada vista registra su limpieza aquí */
+        var _cleanup = null;
+        window.spaRegisterCleanup = function (fn) { _cleanup = fn; };
+        function _runCleanup() {
+            if (typeof _cleanup === 'function') { try { _cleanup(); } catch (e) {} }
+            _cleanup = null;
+        }
+
+        /* Barra de progreso */
+        function _barStart() {
+            var b = document.getElementById('_spa-bar');
+            if (!b) return;
+            b.style.transition = 'none'; b.style.width = '0%'; b.style.opacity = '1';
+            b.offsetWidth; // force reflow
+            b.style.transition = 'width .4s ease'; b.style.width = '65%';
+        }
+        function _barDone() {
+            var b = document.getElementById('_spa-bar');
+            if (!b) return;
+            b.style.width = '100%';
+            setTimeout(function () { b.style.opacity = '0'; setTimeout(function () { b.style.width = '0%'; }, 250); }, 180);
+        }
+
+        /* Función principal de navegación */
+        async function navigate(url, push) {
+            if (typeof url !== 'string') return;
+            _runCleanup();
+            _barStart();
+            try {
+                var res = await fetch(url, {
+                    headers: { 'Accept': 'text/html', 'X-SPA': '1' },
+                    credentials: 'same-origin'
+                });
+                if (!res.ok) throw new Error('bad-response');
+
+                var html = await res.text();
+                var doc  = (new DOMParser()).parseFromString(html, 'text/html');
+                var newMain = doc.getElementById('spa-content');
+                if (!newMain) throw new Error('no-spa-content');
+
+                document.title = doc.title || document.title;
+
+                var main = document.getElementById('spa-content');
+                main.style.opacity = '0';
+                await new Promise(function (r) { setTimeout(r, 90); });
+
+                main.innerHTML = newMain.innerHTML;
+
+                /* Re-ejecutar <script> del nuevo contenido */
+                main.querySelectorAll('script').forEach(function (old) {
+                    var s = document.createElement('script');
+                    Array.from(old.attributes).forEach(function (a) { s.setAttribute(a.name, a.value); });
+                    s.textContent = old.textContent;
+                    old.replaceWith(s);
+                });
+
+                if (push !== false) history.pushState({ spaUrl: url }, '', url);
+                _updateNavActive(url);
+                main.style.opacity = '1';
+
+            } catch (err) {
+                window.location.href = url;
+                return;
+            } finally {
+                _barDone();
+            }
+        }
+
+        /* Actualizar estado activo en la navegación */
+        function _updateNavActive(url) {
+            var path = '';
+            try { path = new URL(url, location.origin).pathname; } catch (e) { return; }
+
+            document.querySelectorAll('[data-spa-path]').forEach(function (el) {
+                var check  = el.dataset.spaPath;
+                var active = (path === check || path.startsWith(check + '/'));
+                var cls    = el.dataset.spaActiveClass;
+                if (cls) {
+                    el.classList.toggle(cls, active);
+                    el.classList.toggle('spa-inactive', !active);
+                }
+            });
+        }
+
+        /* Interceptar clicks en links SPA */
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest('a[data-spa]');
+            if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+            try {
+                var u = new URL(a.href);
+                if (u.origin !== location.origin) return;
+                if (u.pathname === location.pathname) return;
+            } catch (err) { return; }
+            e.preventDefault();
+            navigate(a.href);
+        }, true);
+
+        /* Navegación con botones Atrás/Adelante */
+        window.addEventListener('popstate', function (e) {
+            navigate((e.state && e.state.spaUrl) ? e.state.spaUrl : location.href, false);
+        });
+
+        /* Guardar estado inicial */
+        history.replaceState({ spaUrl: location.href }, '', location.href);
+        window.spaNavigate = navigate;
+
+        /* Actualizar nav en carga inicial */
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () { _updateNavActive(location.href); });
+        } else {
+            _updateNavActive(location.href);
+        }
+    })();
+    </script>
 </html>

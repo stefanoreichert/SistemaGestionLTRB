@@ -146,16 +146,17 @@ class OrderService
      * Crear un pedido de delivery sin mesa física.
      * El pedido queda abierto; los ítems se agregan con addItem().
      */
-    public function createDeliveryOrder(string $label): Order
+    public function createDeliveryOrder(string $label, ?int $deliveryNumber = null): Order
     {
         return Order::create([
-            'table_id'       => null,
-            'user_id'        => auth()->id(),
-            'status'         => 'open',
-            'total'          => 0,
-            'is_delivery'    => true,
-            'delivery_label' => $label,
-            'opened_at'      => now(),
+            'table_id'        => null,
+            'user_id'         => auth()->id(),
+            'status'          => 'open',
+            'total'           => 0,
+            'is_delivery'     => true,
+            'delivery_label'  => $label,
+            'delivery_number' => $deliveryNumber,
+            'opened_at'       => now(),
         ]);
     }
 }

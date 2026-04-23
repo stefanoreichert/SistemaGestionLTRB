@@ -3,13 +3,13 @@
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
 
             <div style="display:flex;align-items:center;gap:.6rem;min-width:0;">
-                <a href="{{ route('tables.index') }}"
+                <a href="{{ ($isDelivery ?? false) ? route('delivery.index') : route('tables.index') }}"
                    style="color:#6b7280;text-decoration:none;font-size:.78rem;padding:.45rem .7rem;
                           border:1px solid #2a2a2a;border-radius:.5rem;transition:all .15s;
                           white-space:nowrap;flex-shrink:0;"
                    onmouseover="this.style.color='#e5e7eb';this.style.borderColor='#555';"
                    onmouseout="this.style.color='#6b7280';this.style.borderColor='#2a2a2a';">
-                    &#8592; Mesas
+                    &#8592; {{ ($isDelivery ?? false) ? 'Deliveries' : 'Mesas' }}
                 </a>
                 <div style="min-width:0;">
                     <div style="font-size:1.1rem;font-weight:800;line-height:1.1;
@@ -65,8 +65,14 @@
                 </button>
                 @endif
 
-                <form id="form-close" method="POST" action="{{ $order ? route('orders.close', $order) : '#' }}">@csrf</form>
-                <form id="form-cancel" method="POST" action="{{ $order ? route('orders.cancel', $order) : '#' }}">
+                <form id="form-close" method="POST"
+                      action="{{ $order
+                          ? (($isDelivery ?? false) ? route('delivery.close', $order) : route('orders.close', $order))
+                          : '#' }}">@csrf</form>
+                <form id="form-cancel" method="POST"
+                      action="{{ $order
+                          ? (($isDelivery ?? false) ? route('delivery.cancel', $order) : route('orders.cancel', $order))
+                          : '#' }}">
                     @csrf @method('DELETE')
                 </form>
                 <button onclick="borrarPedido()"

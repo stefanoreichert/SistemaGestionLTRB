@@ -22,14 +22,16 @@
                 <span style="font-size:0.7rem; color:#4b5563;" id="ws-label">Conectando&hellip;</span>
             </div>
 
-            <button onclick="abrirModalDelivery()"
-                    style="padding:.4rem .9rem; background:rgba(139,92,246,.18); color:#c4b5fd;
-                           border:1px solid rgba(139,92,246,.45); border-radius:.5rem;
-                           font-size:.78rem; font-weight:700; cursor:pointer; transition:all .15s;"
-                    onmouseover="this.style.background='rgba(139,92,246,.32)'"
-                    onmouseout="this.style.background='rgba(139,92,246,.18)'">
+            <a href="{{ route('delivery.index') }}"
+               data-spa="true"
+               style="padding:.4rem .9rem; background:rgba(139,92,246,.18); color:#c4b5fd;
+                      border:1px solid rgba(139,92,246,.45); border-radius:.5rem;
+                      font-size:.78rem; font-weight:700; cursor:pointer; transition:all .15s;
+                      text-decoration:none; display:inline-block;"
+               onmouseover="this.style.background='rgba(139,92,246,.32)'"
+               onmouseout="this.style.background='rgba(139,92,246,.18)'">
                 + Nuevo Delivery
-            </button>
+            </a>
 
         </div>
     </x-slot>
@@ -223,42 +225,6 @@
             .mesa-btn { padding: 1rem .5rem !important; min-height: 70px; }
         }
     </style>
-
-    {{-- Modal Nuevo Delivery --}}
-    <div id="modal-delivery"
-         style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.78);
-                z-index:110; align-items:center; justify-content:center; padding:1rem;"
-         onclick="cerrarModalDelivery()">
-        <div style="background:#161616; border:1px solid rgba(139,92,246,.4); border-radius:1rem;
-                    box-shadow:0 25px 60px rgba(0,0,0,.7); padding:1.5rem; max-width:22rem; width:100%;"
-             onclick="event.stopPropagation()">
-            <h3 style="font-weight:800; font-size:1rem; color:#a78bfa; margin-bottom:.1rem;">🛵 Nuevo Delivery</h3>
-            <p style="font-size:.75rem; color:#6b7280; margin-bottom:1rem;">Nombre del cliente o número de referencia</p>
-
-            <input id="delivery-label-input"
-                   type="text" maxlength="100" placeholder="Ej: Juan García, Pedido #12…"
-                   style="width:100%; box-sizing:border-box; background:#1e1e1e; border:1px solid #333;
-                          color:#e5e7eb; border-radius:.5rem; padding:.6rem .75rem; font-size:.88rem;
-                          margin-bottom:1rem;"
-                   onfocus="this.style.borderColor='#8b5cf6'"
-                   onblur="this.style.borderColor='#333'"
-                   onkeydown="if(event.key==='Enter') confirmarDelivery()">
-
-            <div style="display:flex; gap:.5rem; justify-content:flex-end;">
-                <button onclick="cerrarModalDelivery()"
-                        style="padding:.5rem 1rem; font-size:.78rem; color:#9ca3af;
-                               border:1px solid #333; border-radius:.5rem; background:#1a1a1a; cursor:pointer;"
-                        onmouseover="this.style.background='#222'"
-                        onmouseout="this.style.background='#1a1a1a'">Cancelar</button>
-                <button onclick="confirmarDelivery()"
-                        style="padding:.5rem 1.1rem; font-size:.78rem; color:#fff;
-                               background:#7c3aed; border:none; border-radius:.5rem;
-                               font-weight:700; cursor:pointer;"
-                        onmouseover="this.style.background='#8b5cf6'"
-                        onmouseout="this.style.background='#7c3aed'">Crear Delivery</button>
-            </div>
-        </div>
-    </div>
 
     {{-- Modal resumen rápido --}}
     <div id="modal-resumen"
@@ -473,37 +439,6 @@
 
         function fmt(n) { return parseFloat(n).toLocaleString('es-AR'); }
 
-        /* ── Delivery: modal ────────────────────────────────── */
-        function abrirModalDelivery() {
-            const inp = document.getElementById('delivery-label-input');
-            inp.value = '';
-            document.getElementById('modal-delivery').style.display = 'flex';
-            setTimeout(() => inp.focus(), 60);
-        }
-
-        function cerrarModalDelivery() {
-            document.getElementById('modal-delivery').style.display = 'none';
-        }
-
-        async function confirmarDelivery() {
-            const inp   = document.getElementById('delivery-label-input');
-            const label = inp.value.trim();
-            if (!label) { inp.focus(); return; }
-
-            const r    = await fetch('/api/deliveries', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
-                body: JSON.stringify({ label })
-            });
-            const data = await r.json();
-            if (data.success) {
-                cerrarModalDelivery();
-                window.location.href = data.url;
-            } else {
-                alert('Error al crear el delivery.');
-            }
-        }
-
         /* ── Delivery: lista ────────────────────────────────── */
         function escapeHtmlDel(str) {
             return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -511,14 +446,14 @@
         }
 
         function abrirDelivery(orderId) {
-            window.location.href = '/deliveries/' + orderId;
+            window.location.href = '/delivery/' + orderId;
         }
 
         async function entregarDelivery(orderId, btn) {
             btn.disabled    = true;
             btn.textContent = '…';
             try {
-                const r = await fetch('/deliveries/' + orderId + '/deliver', {
+                const r = await fetch('/delivery/' + orderId + '/deliver', {
                     method: 'PATCH',
                     headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
                 });
@@ -591,7 +526,7 @@
 
         async function loadDeliveries() {
             try {
-                const r    = await fetch('/api/deliveries', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
+                const r    = await fetch('/api/delivery', { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF } });
                 const list = await r.json();
                 const container = document.getElementById('deliveries-list');
                 // Limpiar tarjetas existentes (conservar el párrafo vacío)
@@ -601,7 +536,7 @@
             } catch { /* silencioso */ }
         }
 
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') { cerrarModal(); cerrarModalDelivery(); } });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { cerrarModal(); } });
 
         /* ── WebSocket: tiempo real ─────────────────────────── */
         function initEcho() {
@@ -645,13 +580,28 @@
                 });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function __tablesInit() {
             initEcho();
-            // Polling cada 5 segundos para sincronizar kitchen_status
-            setInterval(pollKitchenStatus, 5000);
-            // Cargar deliveries al inicio y refrescar cada 10 s
+            // Guardar IDs de intervalos para poder limpiarlos en SPA
+            window._tablesIntervals = window._tablesIntervals || [];
+            window._tablesIntervals.push(setInterval(pollKitchenStatus, 5000));
             loadDeliveries();
-            setInterval(loadDeliveries, 10000);
-        });
+            window._tablesIntervals.push(setInterval(loadDeliveries, 10000));
+
+            // Registrar limpieza para navegación SPA
+            if (typeof window.spaRegisterCleanup === 'function') {
+                window.spaRegisterCleanup(function () {
+                    (window._tablesIntervals || []).forEach(clearInterval);
+                    window._tablesIntervals = [];
+                    if (window.Echo) { try { window.Echo.leave('restaurant'); } catch (e) {} }
+                });
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', __tablesInit);
+        } else {
+            __tablesInit();
+        }
     </script>
 </x-app-layout>

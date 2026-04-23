@@ -130,4 +130,50 @@ class OrderController extends Controller
         return redirect()->route('tables.index')
             ->with('success', "Pedido de Mesa {$mesa} cancelado.");
     }
+
+    /**
+     * Cerrar un pedido de delivery → redirige a ticket y luego a deliveries.
+     */
+    public function closeDelivery(Order $order)
+    {
+        if (! $order->is_delivery || ! $order->isOpen()) {
+            return redirect()->route('delivery.index')
+                ->with('error', 'El pedido no está disponible.');
+        }
+
+        if ($order->items()->count() === 0) {
+            return back()->with('error', 'No se puede cerrar un delivery sin ítems.');
+        }
+
+        try {
+            $this->orderService->closeOrder($order);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        try { broadcast(new OrderUpdatedEvent($order->fresh(['items.product']), 'closed')); } catch (\Throwable) {}
+
+        return redirect()->route('tickets.show', $order)
+            ->with('success', 'Delivery cerrado correctamente.');
+    }
+
+    /**
+     * Cancelar un pedido de delivery SIN descontar stock.
+     */
+    public function cancelDelivery(Order $order)
+    {
+        if (! $order->is_delivery || ! $order->isOpen()) {
+            return redirect()->route('delivery.index')
+                ->with('error', 'El pedido no está disponible.');
+        }
+
+        $label = $order->delivery_label ?? "Delivery #{$order->delivery_number}";
+
+        $this->orderService->cancelOrder($order);
+
+        try { broadcast(new OrderUpdatedEvent($order->setRelation('items', collect()), 'cancelled')); } catch (\Throwable) {}
+
+        return redirect()->route('delivery.index')
+            ->with('success', "Pedido de {$label} cancelado.");
+    }
 }

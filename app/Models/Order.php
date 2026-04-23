@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    protected $fillable = ['table_id', 'user_id', 'total', 'status', 'kitchen_status', 'opened_at', 'closed_at', 'is_delivery', 'delivery_label'];
+    protected $fillable = ['table_id', 'user_id', 'total', 'status', 'kitchen_status', 'opened_at', 'closed_at', 'is_delivery', 'delivery_label', 'delivery_number'];
 
     protected $casts = [
         'total'       => 'decimal:2',

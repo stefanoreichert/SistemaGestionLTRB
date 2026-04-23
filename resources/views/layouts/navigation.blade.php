@@ -21,7 +21,17 @@
         }
         .nav-mobile-link:hover { background:#1e1e1e; color:#e5e7eb; }
         .nav-mobile-link.active { background:#d97706; color:#fff; }
+        .nav-mobile-link.active-delivery { background:#6d28d9 !important; color:#fff !important; }
         .nav-mobile-divider { height:1px; background:#222; margin:.35rem 0; }
+        /* SPA nav links (desktop) */
+        .spa-link {
+            padding: 0.45rem 0.9rem; border-radius: 0.5rem; font-size: 0.8rem;
+            font-weight: 600; text-decoration: none; transition: all 0.15s;
+            color: #9ca3af; background: transparent;
+        }
+        .spa-link:hover { color: #e5e7eb; background: rgba(255,255,255,.07); }
+        .spa-link.spa-active-amber { background: #d97706; color: #fff; }
+        .spa-link.spa-active-violet { background: #6d28d9; color: #fff; }
     </style>
 
     <div style="padding:0 1.25rem;">
@@ -41,12 +51,18 @@
             <div class="nav-desktop" style="display:flex; align-items:center; gap:0.25rem;">
                 @if(auth()->user()->isAdmin() || auth()->user()->isMozo())
                 <a href="{{ route('tables.index') }}"
-                   style="padding:0.45rem 0.9rem; border-radius:0.5rem; font-size:0.8rem; font-weight:600;
-                          text-decoration:none; transition:all 0.15s;
-                          {{ request()->routeIs('tables.index','orders.show')
-                              ? 'background:#d97706; color:#fff;'
-                              : 'color:#9ca3af; background:transparent;' }}">
+                   class="spa-link {{ request()->routeIs('tables.index') ? 'spa-active-amber' : '' }}"
+                   data-spa="true"
+                   data-spa-path="/tables"
+                   data-spa-active-class="spa-active-amber">
                     🪑 Mesas
+                </a>
+                <a href="{{ route('delivery.index') }}"
+                   class="spa-link {{ request()->routeIs('delivery.index','delivery.show') ? 'spa-active-violet' : '' }}"
+                   data-spa="true"
+                   data-spa-path="/delivery"
+                   data-spa-active-class="spa-active-violet">
+                    🛵 Delivery
                 </a>
                 @endif
 
@@ -138,8 +154,14 @@
     <div id="nav-mobile-menu" class="nav-mobile-menu">
         @if(auth()->user()->isAdmin() || auth()->user()->isMozo())
         <a href="{{ route('tables.index') }}"
-           class="nav-mobile-link {{ request()->routeIs('tables.index','orders.show') ? 'active' : '' }}">
+           class="nav-mobile-link {{ request()->routeIs('tables.index','orders.show') ? 'active' : '' }}"
+           data-spa="true" data-spa-path="/tables" data-spa-active-class="active">
             🪑 Mesas
+        </a>
+        <a href="{{ route('delivery.index') }}"
+           class="nav-mobile-link {{ request()->routeIs('delivery.index','delivery.show') ? 'active-delivery' : '' }}"
+           data-spa="true" data-spa-path="/delivery" data-spa-active-class="active-delivery">
+            🛵 Delivery
         </a>
         @endif
 

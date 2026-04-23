@@ -38,11 +38,15 @@ Route::middleware('auth')->group(function () {
         Route::delete('/order-items/{item}', [OrderItemController::class, 'destroy'])->name('order-items.destroy');
 
         // Delivery
-        Route::post('/api/deliveries', [DeliveryController::class, 'store'])->name('deliveries.store');
-        Route::get('/api/deliveries', [DeliveryController::class, 'apiIndex'])->name('deliveries.index');
-        Route::get('/deliveries/{order}', [DeliveryController::class, 'show'])->name('deliveries.show');
-        Route::post('/deliveries/{order}/items', [OrderItemController::class, 'storeForDelivery'])->name('delivery-items.store');
-        Route::patch('/deliveries/{order}/deliver', [OrderController::class, 'deliver'])->name('deliveries.deliver');
+        Route::get('/delivery', [DeliveryController::class, 'index'])->name('delivery.index');
+        Route::post('/api/delivery', [DeliveryController::class, 'store'])->name('delivery.store');
+        Route::get('/api/delivery', [DeliveryController::class, 'apiIndex'])->name('delivery.apiIndex');
+        Route::get('/delivery/{order}', [DeliveryController::class, 'show'])->name('delivery.show');
+        Route::post('/delivery/{order}/items', [OrderItemController::class, 'storeForDelivery'])->name('delivery.items.store');
+        Route::get('/delivery/{order}/summary', [DeliveryController::class, 'summary'])->name('delivery.summary');
+        Route::patch('/delivery/{order}/deliver', [OrderController::class, 'deliver'])->name('delivery.deliver');
+        Route::post('/delivery/{order}/close', [OrderController::class, 'closeDelivery'])->name('delivery.close');
+        Route::delete('/delivery/{order}', [OrderController::class, 'cancelDelivery'])->name('delivery.cancel');
     });
 
     Route::middleware('role:admin,mozo')->get('/api/products', [ProductController::class, 'index'])->name('products.json');
