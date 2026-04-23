@@ -52,40 +52,56 @@
             width: 100%;
             display: block;
         }
+        .mesa-btn {
+            position: relative;
+            border-radius: 1rem;
+            border-width: 2px;
+            border-style: solid;
+            padding: 1.1rem 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+            user-select: none;
+            background: none;
+            width: 100%;
+            display: block;
+        }
         .mesa-btn:active { transform: scale(0.93) !important; }
         .mesa-libre {
-            background: rgba(5,78,40,0.35);
-            border-color: rgba(16,185,129,0.35);
+            background: #0d3d27;
+            border-color: #10b981;
             color: #6ee7b7;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.7), 0 0 0 1px rgba(16,185,129,0.2);
         }
         .mesa-libre:hover {
-            background: rgba(5,78,40,0.6);
-            border-color: #10b981;
-            transform: scale(1.06);
-            box-shadow: 0 0 18px rgba(16,185,129,0.25);
+            background: #0f4d30;
+            border-color: #34d399;
+            transform: scale(1.05);
+            box-shadow: 0 6px 24px rgba(16,185,129,0.35), 0 3px 12px rgba(0,0,0,0.7);
         }
         .mesa-ocupada {
-            background: rgba(69,10,10,0.45);
-            border-color: rgba(239,68,68,0.35);
+            background: #3d0a0a;
+            border-color: #ef4444;
             color: #fca5a5;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.7), 0 0 0 1px rgba(239,68,68,0.2);
         }
         .mesa-ocupada:hover {
-            background: rgba(69,10,10,0.7);
-            border-color: #ef4444;
-            transform: scale(1.06);
-            box-shadow: 0 0 18px rgba(239,68,68,0.25);
+            background: #4d0f0f;
+            border-color: #f87171;
+            transform: scale(1.05);
+            box-shadow: 0 6px 24px rgba(239,68,68,0.35), 0 3px 12px rgba(0,0,0,0.7);
         }
-        /* Amarillo: pedido listo en cocina, esperando entrega */
         .mesa-lista {
-            background: rgba(120,83,0,0.35);
-            border-color: rgba(234,179,8,0.55);
+            background: #3d2800;
+            border-color: #eab308;
             color: #fef08a;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.7), 0 0 0 1px rgba(234,179,8,0.2);
         }
         .mesa-lista:hover {
-            background: rgba(120,83,0,0.55);
-            border-color: #eab308;
-            transform: scale(1.06);
-            box-shadow: 0 0 18px rgba(234,179,8,0.35);
+            background: #4d3300;
+            border-color: #fbbf24;
+            transform: scale(1.05);
+            box-shadow: 0 6px 24px rgba(234,179,8,0.35), 0 3px 12px rgba(0,0,0,0.7);
         }
         .mesa-num  { font-size: 1.6rem; font-weight: 800; line-height: 1; }
         .mesa-estado {
@@ -153,7 +169,7 @@
         @endif
 
         {{-- Grilla de mesas --}}
-        <div id="mesas-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1.5rem;"
+        <div id="mesas-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1.25rem;"
              class="mesas-grid">
             @foreach($tables as $table)
                 @php
@@ -214,12 +230,19 @@
     </div>
 
     <style>
-        @media (min-width:480px)  { .mesas-grid { grid-template-columns: repeat(5,1fr)!important;  gap:1.5rem!important; } }
-        @media (min-width:640px)  { .mesas-grid { grid-template-columns: repeat(6,1fr)!important;  gap:1.5rem!important; } }
-        @media (min-width:768px)  { .mesas-grid { grid-template-columns: repeat(7,1fr)!important;  gap:1.6rem!important; } }
-        @media (min-width:900px)  { .mesas-grid { grid-template-columns: repeat(8,1fr)!important;  gap:1.75rem!important; } }
-        @media (min-width:1200px) { .mesas-grid { grid-template-columns: repeat(9,1fr)!important;  gap:2rem!important; } }
-        @media (min-width:1440px) { .mesas-grid { grid-template-columns: repeat(10,1fr)!important; gap:2rem!important; } }
+        @media (min-width:480px)  { .mesas-grid { grid-template-columns: repeat(4,1fr)!important;  gap:1.25rem!important; } }
+        @media (min-width:640px)  { .mesas-grid { grid-template-columns: repeat(5,1fr)!important;  gap:1.4rem!important; } }
+        @media (min-width:768px)  { .mesas-grid { grid-template-columns: repeat(6,1fr)!important;  gap:1.5rem!important; } }
+        @media (min-width:900px)  { .mesas-grid { grid-template-columns: repeat(7,1fr)!important;  gap:1.5rem!important; } }
+        @media (min-width:1200px) { .mesas-grid { grid-template-columns: repeat(8,1fr)!important;  gap:1.5rem!important; } }
+        @media (min-width:1440px) { .mesas-grid { grid-template-columns: repeat(9,1fr)!important;  gap:1.5rem!important; } }
+        @media (min-width:1700px) { .mesas-grid { grid-template-columns: repeat(10,1fr)!important; gap:1.5rem!important; } }
+        /* En móvil las mesas son más grandes y táctiles */
+        @media (max-width:479px) {
+            .mesa-num    { font-size: 2rem !important; }
+            .mesa-estado { font-size: .65rem !important; }
+            .mesa-btn    { padding: 1.2rem .5rem !important; min-height: 70px; }
+        }
         /* En móvil las mesas son más grandes y táctiles */
         @media (max-width:479px) {
             .mesa-num    { font-size: 2rem !important; }

@@ -32,5 +32,5 @@ RUN chown -R www-data:www-data /var/www \
 
 EXPOSE 10000
 
-# SOLO servidor (IMPORTANTE)
-CMD php artisan serve --host=0.0.0.0 --port=$PORT
+# Migrar BD y arrancar servidor
+CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
