@@ -222,7 +222,7 @@
             <div id="deliveries-list"
                  style="display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:.6rem;">
                 <p id="deliveries-empty"
-                   style="color:#4b5563; font-style:italic; font-size:.8rem; grid-column:1/-1;">
+                   style="color:#6b7280; font-style:italic; font-size:.8rem; grid-column:1/-1;">
                     Sin deliveries activos.
                 </p>
             </div>
