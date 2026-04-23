@@ -38,6 +38,31 @@ class KitchenController extends Controller
     }
 
     /**
+     * API: Pedidos activos completos para el KDS (polling de sincronización cada 10s).
+     * Devuelve la misma estructura que usan los eventos WebSocket en el frontend.
+     */
+    public function apiOrders(): JsonResponse
+    {
+        $orders = $this->kitchenService->getActiveOrders();
+
+        return response()->json($orders->map(fn($o) => [
+            'order_id'       => $o->id,
+            'table_number'   => $o->table?->number,
+            'is_delivery'    => (bool) $o->is_delivery,
+            'delivery_label' => $o->delivery_label,
+            'kitchen_status' => $o->kitchen_status ?? 'pendiente',
+            'opened_at'      => $o->opened_at?->toIso8601String(),
+            'items'          => $o->items->map(fn($i) => [
+                'id'       => $i->id,
+                'name'     => $i->product->name,
+                'quantity' => $i->quantity,
+                'notes'    => $i->notes,
+                'type'     => $i->product->type,
+            ])->values(),
+        ]));
+    }
+
+    /**
      * Toggle kitchen_status del pedido completo.
      * pendiente/en_proceso → listo, listo → en_proceso
      */

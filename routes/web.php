@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin,cocina')->group(function () {
         Route::get('/kitchen', [KitchenController::class, 'index'])->name('kitchen');
         Route::get('/api/kitchen/active-ids', [KitchenController::class, 'activeOrderIds'])->name('kitchen.active-ids');
+        Route::get('/api/kitchen/orders', [KitchenController::class, 'apiOrders'])->name('kitchen.api-orders');
         Route::put('/kitchen/items/{item}/status', [KitchenController::class, 'updateItemStatus'])->name('kitchen.item.status');
         Route::patch('/kitchen/orders/{order}/status', [KitchenController::class, 'updateOrderStatus'])->name('kitchen.order.status');
     });

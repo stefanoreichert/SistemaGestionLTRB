@@ -541,14 +541,20 @@ function initEcho() {
 
 document.addEventListener('DOMContentLoaded', initEcho);
 
-/* ── Polling de respaldo (cubre fallos de WebSocket) ── */
-function pollActiveOrders() {
-    fetch('/api/kitchen/active-ids', {
-        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
-    })
-    .then(r => r.json())
-    .then(ids => {
-        const activeSet = new Set(ids.map(String));
+/* ── Polling de sincronización completa cada 10s ─────────────────────────
+   Agrega tarjetas que no están en pantalla Y elimina las que ya no existen.
+   Actúa como respaldo cuando WebSocket falla o pierde un evento.
+   ──────────────────────────────────────────────────────────────────────── */
+async function pollSync() {
+    try {
+        const r    = await fetch('/api/kitchen/orders', {
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+        });
+        const orders = await r.json();
+
+        const activeSet = new Set(orders.map(o => String(o.order_id)));
+
+        /* 1. Eliminar tarjetas que ya no están activas */
         document.querySelectorAll('.order-card').forEach(card => {
             const oid = card.id.replace('card-order-', '');
             if (!activeSet.has(oid)) {
@@ -558,10 +564,23 @@ function pollActiveOrders() {
                 setTimeout(() => { card.remove(); updateMesasCount(); }, 520);
             }
         });
-    })
-    .catch(() => {/* silencioso */});
+
+        /* 2. Agregar tarjetas que no están en pantalla todavía */
+        const grid = document.getElementById('kds-grid');
+        orders.forEach(data => {
+            if (document.getElementById('card-order-' + data.order_id)) return; // ya existe
+
+            document.getElementById('kds-empty-msg')?.remove();
+
+            const cardHtml = renderCard(data);
+            if (cardHtml) {
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+                updateMesasCount();
+            }
+        });
+    } catch { /* silencioso */ }
 }
-setInterval(pollActiveOrders, 8000);
+setInterval(pollSync, 10000);
 
 /* ── Sección Entregados ──────────────────────────── */
 function addToEntregados(data) {

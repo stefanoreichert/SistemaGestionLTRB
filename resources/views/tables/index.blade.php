@@ -135,7 +135,7 @@
         .btn-del-entregar-hidden { display:none !important; }
     </style>
 
-    <div style="padding:1.25rem;">
+    <div style="padding:1.5rem;">
 
         @if(session('success'))
             <div style="margin-bottom:1rem; padding:0.75rem 1rem; border-radius:0.5rem;
@@ -153,7 +153,7 @@
         @endif
 
         {{-- Grilla de mesas --}}
-        <div id="mesas-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.6rem;"
+        <div id="mesas-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem;"
              class="mesas-grid">
             @foreach($tables as $table)
                 @php
@@ -214,15 +214,16 @@
     </div>
 
     <style>
-        @media (min-width:480px)  { .mesas-grid { grid-template-columns: repeat(5,1fr)!important; } }
-        @media (min-width:640px)  { .mesas-grid { grid-template-columns: repeat(6,1fr)!important; } }
-        @media (min-width:768px)  { .mesas-grid { grid-template-columns: repeat(8,1fr)!important; } }
-        @media (min-width:900px)  { .mesas-grid { grid-template-columns: repeat(10,1fr)!important; } }
+        @media (min-width:480px)  { .mesas-grid { grid-template-columns: repeat(5,1fr)!important;  gap:1rem!important; } }
+        @media (min-width:640px)  { .mesas-grid { grid-template-columns: repeat(6,1fr)!important;  gap:1rem!important; } }
+        @media (min-width:768px)  { .mesas-grid { grid-template-columns: repeat(8,1fr)!important;  gap:1.1rem!important; } }
+        @media (min-width:900px)  { .mesas-grid { grid-template-columns: repeat(9,1fr)!important;  gap:1.1rem!important; } }
+        @media (min-width:1200px) { .mesas-grid { grid-template-columns: repeat(10,1fr)!important; gap:1.25rem!important; } }
         /* En móvil las mesas son más grandes y táctiles */
         @media (max-width:479px) {
-            .mesa-num  { font-size: 2rem !important; }
+            .mesa-num    { font-size: 2rem !important; }
             .mesa-estado { font-size: .65rem !important; }
-            .mesa-btn { padding: 1rem .5rem !important; min-height: 70px; }
+            .mesa-btn    { padding: 1rem .5rem !important; min-height: 70px; }
         }
     </style>
 
