@@ -4,6 +4,7 @@ vendor/
 
 # Assets compilados (se generan en Stage 1)
 public/build/
+public/hot
 
 # Storage (logs, uploads, cache)
 storage/logs/
