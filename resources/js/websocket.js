@@ -18,6 +18,7 @@
     }
 
     function connect() {
+        if (window.__echoUnavailable) return;
         if (!window.Echo) { setTimeout(connect, 100); return; }
 
         window.Echo.channel('restaurant')
