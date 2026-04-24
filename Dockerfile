@@ -29,12 +29,18 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-di
 # assets compilados
 COPY --from=node_builder /app/public/build ./public/build
 
+# 🔥 FIX: crear carpetas necesarias de Laravel (evita "valid cache path")
+RUN mkdir -p storage/framework/views \
+    storage/framework/cache \
+    storage/framework/sessions \
+    bootstrap/cache
+
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 10000
 
+# 🔥 FIX: no migraciones en runtime
 CMD php artisan config:clear && \
     php artisan cache:clear && \
-    php artisan migrate --force && \
     php artisan serve --host=0.0.0.0 --port=$PORT
