@@ -119,6 +119,14 @@
 
                 document.title = doc.title || document.title;
 
+                /* Actualizar CSRF token por si la sesión rotó */
+                var newCsrf = doc.querySelector('meta[name="csrf-token"]');
+                if (newCsrf) {
+                    var headCsrf = document.querySelector('meta[name="csrf-token"]');
+                    if (headCsrf) headCsrf.setAttribute('content', newCsrf.getAttribute('content'));
+                    if (window.axios) window.axios.defaults.headers.common['X-CSRF-TOKEN'] = newCsrf.getAttribute('content');
+                }
+
                 var main = document.getElementById('spa-content');
                 main.style.opacity = '0';
                 await new Promise(function (r) { setTimeout(r, 90); });
