@@ -192,9 +192,6 @@
             @endforeach
         </div>
 
-        <p style="text-align:center; font-size:0.7rem; color:#374151; margin-top:1.5rem;">
-            Click = abrir mesa &nbsp;&bull;&nbsp; Doble click = resumen rÃ¡pido
-        </p>
 
     </div>
 

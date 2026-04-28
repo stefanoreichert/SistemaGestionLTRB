@@ -80,4 +80,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// RUTA TEMPORAL DE EMERGENCIA - ELIMINAR DESPUÉS DE USAR
+Route::get('/emergency-fix-admin-ltrbx9z', function () {
+    $user = \App\Models\User::where('email', 'admin@lostroncos.com')->first();
+    if (!$user) return 'Usuario no encontrado.';
+    $user->role = 'admin';
+    $user->save();
+    return 'OK: rol admin asignado a ' . $user->email;
+});
+
 require __DIR__ . '/auth.php';
