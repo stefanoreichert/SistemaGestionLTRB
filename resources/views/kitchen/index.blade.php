@@ -158,6 +158,10 @@
     <div style="display:flex;align-items:center;gap:0.5rem;">
         <span class="kds-badge badge-ws-off" id="ws-badge">Conectando…</span>
         <a href="/tables" class="kds-nav-btn">🪑 Mesas</a>
+        <form method="POST" action="{{ route('logout') }}" style="margin:0;">
+            @csrf
+            <button type="submit" class="kds-nav-btn" style="border-color:#4b1c1c;color:#f87171;">⏏ Salir</button>
+        </form>
     </div>
 </header>
 
