@@ -15,6 +15,18 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => redirect()->route('tables.index'));
 
+// DIAGNÓSTICO TEMPORAL
+Route::middleware('auth')->get('/debug-user', function () {
+    $u = auth()->user();
+    return response()->json([
+        'id'    => $u->id,
+        'email' => $u->email,
+        'role'  => $u->role,
+        'role_length' => strlen($u->role ?? ''),
+        'role_hex' => bin2hex($u->role ?? ''),
+    ]);
+});
+
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', function () {
